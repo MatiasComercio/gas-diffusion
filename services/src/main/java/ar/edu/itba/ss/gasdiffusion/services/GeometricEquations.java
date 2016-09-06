@@ -1,6 +1,7 @@
 package ar.edu.itba.ss.gasdiffusion.services;
 
 import ar.edu.itba.ss.gasdiffusion.models.Point;
+import ar.edu.itba.ss.gasdiffusion.models.Wall;
 
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
@@ -64,40 +65,31 @@ public abstract class GeometricEquations {
     /**
      * Calculates the time when it collides with a horizontal wall
      * @param point
-     * @param upperBound upper wall position
-     * @param lowerBound lower wall position
+     * @param wall
+     * @param negativeBound
+     * @param positiveBound
      * @return
      */
-    public static Double timeToHitHorizontalWall(final Point point, final double upperBound, final double lowerBound) {
-        final double vy = point.speed() * Math.sin(point.orientation());
+    public static Double timeToHitWall(final Point point, final Wall wall,
+                                       final double negativeBound, final double positiveBound) {
+        double v = 0.0;
+        double r = 0.0;
 
-        if(vy == 0) {
+        if(wall == Wall.HORIZONTAL) {
+            v = point.speed() * Math.sin(point.orientation());
+            r = point.y();
+        } else if(wall == Wall.VERTICAL) {
+            v = point.speed() * Math.cos(point.orientation());
+            r = point.x();
+        }
+
+        if(v == 0) {
             return Double.POSITIVE_INFINITY;
         }
-        if(vy < 0) {
-            return (lowerBound + point.radio() - point.y()) / -vy;
+        if(v < 0) {
+            return (negativeBound + point.radio() - r) / -v;
         }
-        return (upperBound - point.radio() - point.y()) / vy;
-
-    }
-
-    /**
-     * Calculates the time when it collides with a vertical wall
-     * @param point
-     * @param leftBound left wall position
-     * @param rightBound right wall position
-     * @return
-     */
-    public static Double timeToHitVerticalWall(final Point point, final double leftBound, final double rightBound) {
-        final double vx = point.speed() * Math.cos(point.orientation());
-
-        if(vx == 0) {
-            return Double.POSITIVE_INFINITY;
-        }
-        if(vx < 0) {
-            return (leftBound + point.radio() - point.x()) / -vx;
-        }
-        return (rightBound - point.radio() - point.x()) / vx;
+        return (positiveBound - point.radio() - r) / v;
     }
 
     /**
