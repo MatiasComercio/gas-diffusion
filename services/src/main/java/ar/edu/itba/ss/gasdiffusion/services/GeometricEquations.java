@@ -143,8 +143,11 @@ public abstract class GeometricEquations {
     }
 
     public static Point movePoint(final Point point, final double time) {
-        final double newX = point.x() + point.speed() * time;
-        final double newY = point.y() + point.speed() * time;
+        final double vx = point.speed() * Math.cos(point.orientation());
+        final double vy = point.speed() * Math.sin(point.orientation());
+
+        final double newX = point.x() + vx * time;
+        final double newY = point.y() + vy * time;
 
         return point.withX(newX).withY(newY);
     }
