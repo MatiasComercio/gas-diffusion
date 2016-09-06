@@ -141,4 +141,11 @@ public abstract class GeometricEquations {
 
         return new Point[]{nextPoint1, nextPoint2};
     }
+
+    public static Point movePoint(final Point point, final double time) {
+        final double newX = point.x() + point.speed() * time;
+        final double newY = point.y() + point.speed() * time;
+
+        return point.withX(newX).withY(newY);
+    }
 }
