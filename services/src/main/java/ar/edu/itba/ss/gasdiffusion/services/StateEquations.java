@@ -29,7 +29,9 @@ public abstract class StateEquations {
          * which reduces the number of degrees of freedom per particle by
          * the number of spatial dimensions).
          */
-        return sum / (BOLTZMANN_CONSTANT * spatialDimension * (N - 1));
+//        return sum / (BOLTZMANN_CONSTANT * spatialDimension * (N - 1));
+
+        return BOLTZMANN_CONSTANT * sum;
     }
 
     public static double pressure(final Point point, final Wall wall, final double tc) {
