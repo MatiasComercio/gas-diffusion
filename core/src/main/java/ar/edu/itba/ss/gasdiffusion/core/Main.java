@@ -1,6 +1,7 @@
 package ar.edu.itba.ss.gasdiffusion.core;
 
 import ar.edu.itba.ss.gasdiffusion.models.Point;
+import ar.edu.itba.ss.gasdiffusion.models.Wall;
 import ar.edu.itba.ss.gasdiffusion.services.PointFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,6 +149,9 @@ public class Main {
       return;
     }
     generateOutputDatFile(points, 0);
+
+    Wall.HORIZONTAL.setLength(staticData.W);
+    Wall.VERTICAL.setLength(staticData.L);
   }
 
   private static void generateOutputDatFile(final Set<Point> updatedParticles, final long iteration) {
