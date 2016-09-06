@@ -9,5 +9,10 @@ public class PointsEvent extends Event {
         this.p2 = p2;
     }
 
+    @Override
+    public void execute() {
+
+    }
+
     // TODO: Not sure if something else should go here
 }

@@ -22,4 +22,6 @@ public abstract class Event implements Comparable<Event> {
     public double getTime() {
         return time;
     }
+
+    public abstract void execute();
 }
