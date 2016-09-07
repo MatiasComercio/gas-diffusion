@@ -1,5 +1,6 @@
 package ar.edu.itba.ss.gasdiffusion.models;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class WallEvent extends Event {
@@ -14,13 +15,19 @@ public class WallEvent extends Event {
 
     @Override
     public Set<Point> execute() {
-        /**
-         * TODO: The idea is that from the main loop it executes the minimum time priority event (wall collision or
-         * between two particles) and the loop does not need to know which type of event is it. The only issue is that
-         * we have to create a new point each time and there is no way of returning 1 or 2 points in the way the
-         * geometricalEquations are made
-         */
-        return null;
+        final Set<Point> points = new HashSet<>();
+        double orientation = 0.0;
 
+        if(wall == Wall.VERTICAL) {
+            orientation = Math.acos(-1 * point.vx() / point.speed());
+        } else if (wall == Wall.HORIZONTAL) {
+            orientation = Math.asin(-1 * point.vy() / point.speed());
+        }
+
+        points.add(
+                point.withSpeed(orientation)
+        );
+
+        return points;
     }
 }

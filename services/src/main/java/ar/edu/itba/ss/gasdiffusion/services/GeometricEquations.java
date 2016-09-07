@@ -3,6 +3,9 @@ package ar.edu.itba.ss.gasdiffusion.services;
 import ar.edu.itba.ss.gasdiffusion.models.Point;
 import ar.edu.itba.ss.gasdiffusion.models.Wall;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 
@@ -90,7 +93,9 @@ public abstract class GeometricEquations {
      * @param p2
      * @return an array of two points, containing the points with the updated velocities (orientation)
      */
-    public static Point[] solveCollision(final Point p1, final Point p2) {
+    public static Set<Point> solveCollision(final Point p1, final Point p2) {
+        final Set<Point> newPoints = new HashSet<>();
+
         // Components of delta v
         final double deltaVx = p2.vx() - p1.vx();
         final double deltaVy = p2.vy() - p1.vy();
@@ -123,7 +128,10 @@ public abstract class GeometricEquations {
                 Math.acos(nextVx2 / p2.speed())
         );
 
-        return new Point[]{nextPoint1, nextPoint2};
+        newPoints.add(nextPoint1);
+        newPoints.add(nextPoint2);
+
+        return newPoints;
     }
 
     public static Point movePoint(final Point point, final double time) {
@@ -132,4 +140,6 @@ public abstract class GeometricEquations {
 
         return point.withX(newX).withY(newY);
     }
+
+
 }
