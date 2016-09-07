@@ -152,6 +152,20 @@ public class Main {
 
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
+
+    GasDiffusion gas = new GasDiffusion(staticData.L, staticData.W, opening);
+    Set<Point> particles;
+
+    //TODO: Calculate fraction inside GasDiffusion and add setter OR calculate fraction in Main class
+    // after each cycle.
+    int i=0;
+    while(i<100){
+      //particles = gas.run();
+
+      i++;
+    }
+
+
   }
 
   private static void generateOutputDatFile(final Set<Point> updatedParticles, final long iteration) {

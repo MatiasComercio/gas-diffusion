@@ -79,7 +79,7 @@ public abstract class GeometricEquations {
             return Double.POSITIVE_INFINITY;
         }
         if(v < 0) {
-            return (negativeBound + point.radio() - r) / -v;
+            return (negativeBound + point.radio() - r) / v;
         }
         return (positiveBound - point.radio() - r) / v;
     }

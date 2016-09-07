@@ -1,5 +1,7 @@
 package ar.edu.itba.ss.gasdiffusion.models;
 
+import java.util.Set;
+
 public class WallEvent extends Event {
     private final Point point;
     private Wall wall;
@@ -11,12 +13,14 @@ public class WallEvent extends Event {
     }
 
     @Override
-    public void execute() {
+    public Set<Point> execute() {
         /**
          * TODO: The idea is that from the main loop it executes the minimum time priority event (wall collision or
          * between two particles) and the loop does not need to know which type of event is it. The only issue is that
          * we have to create a new point each time and there is no way of returning 1 or 2 points in the way the
          * geometricalEquations are made
          */
+        return null;
+
     }
 }

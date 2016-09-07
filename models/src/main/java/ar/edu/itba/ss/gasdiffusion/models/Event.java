@@ -1,5 +1,7 @@
 package ar.edu.itba.ss.gasdiffusion.models;
 
+import java.util.Set;
+
 public abstract class Event implements Comparable<Event> {
     final double time; // Time has to go here because we need that all the implementations of the Comparable to be equal
 
@@ -23,5 +25,5 @@ public abstract class Event implements Comparable<Event> {
         return time;
     }
 
-    public abstract void execute();
+    public abstract Set<Point> execute();
 }

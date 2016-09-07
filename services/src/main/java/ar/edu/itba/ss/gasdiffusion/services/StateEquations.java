@@ -9,7 +9,6 @@ public abstract class StateEquations {
     private static final double BOLTZMANN_CONSTANT = 1.3806503e-23;
 
     /**
-     * TODO: check if this equation is valid to use in this system
      * Calculate the current temperature of a bounded system based on the equipartition theorem.
      * @param points the set of points that are part of the system
      * @param spatialDimension the number of spatial dimensions
@@ -29,9 +28,9 @@ public abstract class StateEquations {
          * which reduces the number of degrees of freedom per particle by
          * the number of spatial dimensions).
          */
-//        return sum / (BOLTZMANN_CONSTANT * spatialDimension * (N - 1));
+        return sum / (BOLTZMANN_CONSTANT * spatialDimension * (N - 1));
 
-        return BOLTZMANN_CONSTANT * sum;
+        //return BOLTZMANN_CONSTANT * sum;
     }
 
     public static double pressure(final Point point, final Wall wall, final double tc) {
