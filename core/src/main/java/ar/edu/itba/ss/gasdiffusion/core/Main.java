@@ -104,7 +104,7 @@ public class Main {
     // create points' set with static and dynamic files
     final StaticData staticData = loadStaticFile(args[1]);
 
-    final Set<Point> points = loadDynamicFile(args[2], staticData);
+    Set<Point> points = loadDynamicFile(args[2], staticData);
 
     double dt2 = 0;
     try {
@@ -153,17 +153,21 @@ public class Main {
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
 
-    GasDiffusion gas = new GasDiffusion(staticData.L, staticData.W, opening);
-    Set<Point> particles;
+    GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-    //TODO: Calculate fraction inside GasDiffusion and add setter OR calculate fraction in Main class
-    // after each cycle.
-    int i=0;
-    while(i<100){
-      //particles = gas.run();
+    double fraction = 0, currentTime = 0;
+    long i = 0;
 
-      i++;
-    }
+    do{
+      points = gasDiffusion.run(points);
+      currentTime += gasDiffusion.getCurrentTime(); // Time left to reach dt2
+
+      if(currentTime >= dt2){
+        generateOutputDatFile(points, i);
+        currentTime -= dt2;
+      }
+      fraction = gasDiffusion.getFraction();
+    } while(fraction > 0.5 || i<100);
 
 
   }
@@ -380,7 +384,8 @@ public class Main {
     final PointFactory pF = PointFactory.getInstance();
 
     final Point leftBottomPoint = Point.builder(0, 0).speed(0).orientation(0).build();
-    final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
+    //final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
+    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).speed(0).orientation(0).build();
 
     final Set<Point> pointsSet = pF.randomPoints(leftBottomPoint, rightTopPoint,
             staticData.radios, false, Integer.MAX_VALUE, staticData.speed, staticData.mass);

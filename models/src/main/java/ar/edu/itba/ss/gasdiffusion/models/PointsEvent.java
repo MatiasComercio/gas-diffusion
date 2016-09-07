@@ -59,4 +59,6 @@ public class PointsEvent extends Event {
     }
 
     // TODO: Not sure if something else should go here
+
+    // Particle's orientation becomes NaN??
 }

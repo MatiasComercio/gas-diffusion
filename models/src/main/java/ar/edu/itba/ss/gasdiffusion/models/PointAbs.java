@@ -65,12 +65,14 @@ public abstract class PointAbs {
 	}
 
 	@Value.Derived
+	//@Value.Default
 	@Value.Auxiliary
 	public double vx() {
 		return speed() * Math.cos(orientation());
 	}
 
 	@Value.Derived
+	//@Value.Default
 	@Value.Auxiliary
 	public double vy() {
 		return speed() * Math.sin(orientation());
