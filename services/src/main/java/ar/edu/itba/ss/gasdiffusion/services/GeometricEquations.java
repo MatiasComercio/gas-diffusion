@@ -19,37 +19,29 @@ public abstract class GeometricEquations {
      *          a positive value in other case;
      */
     public static Double collisionTime(final Point p1, final Point p2) {
-        // Components of velocity of Point 1
-        final double vx1 = p1.speed() * Math.cos(p1.orientation());
-        final double vy1 = p1.speed() * Math.sin(p1.orientation());
-
-        // Components of velocity of Point 2
-        final double vx2 = p2.speed() * Math.cos(p2.orientation());
-        final double vy2 = p2.speed() * Math.sin(p2.orientation());
-
         // Components of Delta v
-        final double Δvx = vx2 - vx1;
-        final double Δvy = vy2 - vy1;
+        final double deltaVx = p2.vx() - p1.vx();
+        final double deltaVy = p2.vy() - p1.vy();
 
         // Components of Delta r
-        final double Δrx = p2.x() - p1.x();
-        final double Δry = p2.y() - p1.y();
+        final double deltaRx = p2.x() - p1.x();
+        final double deltaRy = p2.y() - p1.y();
 
-        final double vr = Δvx * Δrx + Δvy * Δry;
+        final double vr = deltaVx * deltaRx + deltaVy * deltaRy;
 
         if(vr >= 0) {
             return Double.POSITIVE_INFINITY;
         }
 
-        final double vv = pow(Δvx, 2) + pow(Δvy, 2);
-        final double rr = pow(Δrx, 2) + pow(Δry, 2);
+        final double vv = pow(deltaVx, 2) + pow(deltaVy, 2);
+        final double rr = pow(deltaRx, 2) + pow(deltaRy, 2);
         /**
          * The following formula was taken from class lecture and not from the paper
          * The paper specifies that sigma equals the sums of its radios only when they collide.
          * Otherwise, it is calculated as:
-         * rxi' = rxi + Δt vxi,   ryi' = ryi + Δt vyi
-         * rxj' = rxj + Δt vxj,   ryj' = ryj + Δt vyj
-         * Problem is that we don't have Δt
+         * rxi' = rxi + deltaT vxi,   ryi' = ryi + deltaT vyi
+         * rxj' = rxj + deltaT vxj,   ryj' = ryj + deltaT vyj
+         * Problem is that we don't have deltaT
          */
         final double σ = p1.radio() + p2.radio();
 
@@ -99,37 +91,29 @@ public abstract class GeometricEquations {
      * @return an array of two points, containing the points with the updated velocities (orientation)
      */
     public static Point[] solveCollision(final Point p1, final Point p2) {
-        // Components of velocity of Point 1
-        final double vx1 = p1.speed() * Math.cos(p1.orientation());
-        final double vy1 = p1.speed() * Math.sin(p1.orientation());
+        // Components of delta v
+        final double deltaVx = p2.vx() - p1.vx();
+        final double deltaVy = p2.vy() - p1.vy();
 
-        // Components of velocity of Point 2
-        final double vx2 = p2.speed() * Math.cos(p2.orientation());
-        final double vy2 = p2.speed() * Math.sin(p2.orientation());
+        // Components of delta r
+        final double deltaRx = p2.x() - p1.x();
+        final double deltaRy = p2.y() - p1.y();
+        // Scalar product of delta v and delta r
+        final double vr = deltaVx * deltaRx + deltaVy * deltaRy;
 
-        // Components of Δv
-        final double Δvx = vx2 - vx1;
-        final double Δvy = vy2 - vy1;
+        final double radioSum = p1.radio() + p2.radio();
 
-        // Components of Δr
-        final double Δrx = p2.x() - p1.x();
-        final double Δry = p2.y() - p1.y();
-        // Scalar product of Δv and Δr
-        final double vr = Δvx * Δrx + Δvy * Δry;
-
-        final double σ = p1.radio() + p2.radio();
-
-        final double J = (2 * p1.mass() * p2.mass() * vr) / (σ * (p1.mass() + p2.mass()));
-        final double Jx = J * Δrx / σ;
-        final double Jy = J * Δry / σ;
+        final double J = (2 * p1.mass() * p2.mass() * vr) / (radioSum * (p1.mass() + p2.mass()));
+        final double Jx = J * deltaRx / radioSum;
+        final double Jy = J * deltaRy / radioSum;
 
         // Newton's second law
-        final double nextVx1 = vx1 + Jx / p1.mass();
-        final double nextVy1 = vy1 + Jy / p1.mass();
+        final double nextVx1 = p1.vx() + Jx / p1.mass();
+        final double nextVy1 = p1.vy() + Jy / p1.mass();
 
         // TODO: I can calculate the next speed components for p2, the problem is that i can't return two new points
-        final double nextVx2 = vx2 - Jx / p2.mass();
-        final double nextVy2 = vy2 - Jy / p2.mass();
+        final double nextVx2 = p2.vx() - Jx / p2.mass();
+        final double nextVy2 = p2.vy() - Jy / p2.mass();
 
         final Point nextPoint1 = p1.withOrientation(
                 Math.acos(nextVx1 / p1.speed())
@@ -143,11 +127,8 @@ public abstract class GeometricEquations {
     }
 
     public static Point movePoint(final Point point, final double time) {
-        final double vx = point.speed() * Math.cos(point.orientation());
-        final double vy = point.speed() * Math.sin(point.orientation());
-
-        final double newX = point.x() + vx * time;
-        final double newY = point.y() + vy * time;
+        final double newX = point.x() + point.vx() * time;
+        final double newY = point.y() + point.vy() * time;
 
         return point.withX(newX).withY(newY);
     }

@@ -64,6 +64,16 @@ public abstract class PointAbs {
 		return 0;
 	}
 
+	@Value.Derived
+	public double vx() {
+		return speed() * Math.cos(orientation());
+	}
+
+	@Value.Derived
+	public double vy() {
+		return speed() * Math.sin(orientation());
+	}
+
 	
 	/**
 	 * Prints the immutable value {@code Point} with attribute values.
