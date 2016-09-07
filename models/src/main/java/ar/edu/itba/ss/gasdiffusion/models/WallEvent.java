@@ -19,13 +19,16 @@ public class WallEvent extends Event {
         double orientation = 0.0;
 
         if(wall == Wall.VERTICAL) {
-            orientation = Math.acos(-1 * point.vx() / point.speed());
+            //orientation = Math.acos(-1 * point.vx() / point.speed());
+            orientation = Math.atan( ((-1) * point.vy()) / point.vx());
         } else if (wall == Wall.HORIZONTAL) {
-            orientation = Math.asin(-1 * point.vy() / point.speed());
+            //orientation = Math.asin(-1 * point.vy() / point.speed());
+            orientation = Math.atan(point.vy() / ( (-1) * point.vx()));
         }
 
         points.add(
-                point.withSpeed(orientation)
+                //point.withSpeed(orientation)
+                point.withOrientation(orientation)
         );
 
         return points;

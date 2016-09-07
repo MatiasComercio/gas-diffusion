@@ -32,7 +32,8 @@ public class PointsEvent extends Event {
 
         final double radioSum = p1.radio() + p2.radio();
 
-        final double J = (2 * p1.mass() * p2.mass() * vr) / (radioSum * (p1.mass() + p2.mass()));
+        double J = (2.0 * p1.mass() * p2.mass() * vr) / (radioSum * (p1.mass() + p2.mass()));
+
         final double Jx = J * deltaRx / radioSum;
         final double Jy = J * deltaRy / radioSum;
 
@@ -45,11 +46,11 @@ public class PointsEvent extends Event {
         final double nextVy2 = p2.vy() - Jy / p2.mass();
 
         final Point nextPoint1 = p1.withOrientation(
-                Math.acos(nextVx1 / p1.speed())
+                Math.atan(nextVy1 / nextVx1)
         );
 
         final Point nextPoint2 = p2.withOrientation(
-                Math.acos(nextVx2 / p2.speed())
+                Math.atan(nextVy2 / nextVx2)
         );
 
         newPoints.add(nextPoint1);

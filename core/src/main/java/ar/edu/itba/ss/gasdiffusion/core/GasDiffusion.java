@@ -104,6 +104,8 @@ public class GasDiffusion {
 
         //TODO: Check collisions with wall in the middle
 
+        //TODO: Calculate Temperature and Pressure
+
         return minEvent;
     }
 

@@ -737,7 +737,7 @@ public class Main {
         y = intScanner.nextDouble(); // caught InputMismatchException
         orientation = intScanner.nextDouble();
         points.add(Point.builder(x,y).radio(staticData.radios[i]).speed(staticData.speed)
-                .orientation(orientation).build());
+                .orientation(orientation).mass(staticData.mass).build());
       }
 
     } catch (IOException e) {
