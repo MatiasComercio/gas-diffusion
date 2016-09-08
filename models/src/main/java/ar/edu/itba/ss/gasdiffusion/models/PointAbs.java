@@ -100,7 +100,12 @@ public abstract class PointAbs {
 		final double newX = x() + vx() * time;
 		final double newY = y() + vy() * time;
 
-		return Point.builder(newX, newY).id(this.id()).speed(this.speed()).orientation(this.orientation())
-				.mass(this.mass()).radio(this.radio()).build();
+		return Point.builder(newX, newY)
+				.id(this.id())
+				.vx(this.vx())
+				.vy(this.vy())
+				.mass(this.mass())
+				.radio(this.radio())
+				.build();
 	}
 }

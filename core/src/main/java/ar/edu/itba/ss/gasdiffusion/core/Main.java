@@ -165,10 +165,9 @@ public class Main {
       if (currentTime >= dt2) {
         currentTime = 0.0; // reset time counter
         generateOutputDatFile(points, i); // save to file the current configuration
-        System.out.println("Printing");
       }
       fraction = gasDiffusion.getFraction();
-    } while(fraction > 0.5 || i<100);
+    }
 
 
   }
@@ -389,9 +388,9 @@ public class Main {
   private static void generateDynamicDatFile(final StaticData staticData) {
     final PointFactory pF = PointFactory.getInstance();
 
-    final Point leftBottomPoint = Point.builder(0, 0).speed(0).orientation(0).build();
+    final Point leftBottomPoint = Point.builder(0, 0).vx(0).vy(0).build();
     //final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
-    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).speed(0).orientation(0).build();
+    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).vx(0).vy(0).build();
 
     final Set<Point> pointsSet = pF.randomPoints(leftBottomPoint, rightTopPoint,
             staticData.radios, false, Integer.MAX_VALUE, staticData.speed, staticData.mass);
