@@ -104,7 +104,7 @@ public class Main {
     // create points' set with static and dynamic files
     final StaticData staticData = loadStaticFile(args[1]);
 
-    Set<Point> points = loadDynamicFile(args[2], staticData);
+    List<Point> points = new ArrayList<>(loadDynamicFile(args[2], staticData));
 
     double dt2 = 0;
     try {
@@ -153,15 +153,15 @@ public class Main {
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
 
-    GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
+    final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
     double fraction = 1.0, currentTime = 0;
     long maxIterations = 100;
 
-    for(long i = 0; i < 100000/* fraction > 0.5 */; i++) {
+    for(long i = 0; i < maxIterations /* && fraction > 0.5 */; i++) { //TODO: Finish by fractionParticles and not by number of iterations
       points = gasDiffusion.run(points);
-      currentTime += gasDiffusion.getCurrentTime(); // Time left to reach dt2
-      System.out.println(fraction);
+      currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
+
       if (currentTime >= dt2) {
         currentTime = 0.0; // reset time counter
         generateOutputDatFile(points, i); // save to file the current configuration
@@ -177,19 +177,10 @@ public class Main {
    * @param updatedParticles set of particles to be persisted
    * @param iteration the iteration number
    */
-  private static void generateOutputDatFile(final Set<Point> updatedParticles, final long iteration) {
-    // save data to a new file
-
-//        final File dataFolder = new File(DESTINATION_FOLDER);
-//        dataFolder.mkdirs(); // tries to make directories for the .dat files
-//
-//		/* delete previous dynamic.dat file, if any */
+  private static void generateOutputDatFile(final Collection<Point> updatedParticles, final long iteration) {
+    /* delete previous dynamic.dat file, if any */
     final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
     final Path pathToVaFile = Paths.get(DESTINATION_FOLDER, VA_FILE);
-//
-//        if(!deleteIfExists(pathToDatFile)) {
-//            return;
-//        }
 
     /* write the new output.dat file */
     final String[] data = pointsToString(updatedParticles, iteration);
@@ -198,13 +189,9 @@ public class Main {
     BufferedWriter va_writer = null;
     try {
       writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
-//            writer.write(String.valueOf(updatedParticles.size()));
-//            writer.write("\n");
       writer.write(data[0]);
 
       va_writer = new BufferedWriter(new FileWriter(pathToVaFile.toFile(), true));
-//            va_writer.write(String.valueOf(iteration));
-//            va_writer.write(",");
       va_writer.write(data[1]); // write va data
       va_writer.write("\n");
 
@@ -452,7 +439,7 @@ public class Main {
     return sb.toString();
   }
   // Used for building output.dat
-  private static String[] pointsToString(final Set<Point> pointsSet, final long iteration) {
+  private static String[] pointsToString(final Collection<Point> pointsSet, final long iteration) {
     final StringBuilder sb = new StringBuilder();
     sb.append(iteration).append('\n');
     double vx, vy, r, g, b;
@@ -590,8 +577,18 @@ public class Main {
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
+      sb.append(N+5).append('\t').append(W/2).append('\t').append(0).append('\t').append(0)
+              .append('\t').append(0).append('\t')
+              // color: black
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+      sb.append(N+6).append('\t').append(W/2).append('\t').append(L).append('\t').append(0)
+              .append('\t').append(0).append('\t')
+              // color: black
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
 
-      stringN = String.valueOf(N+4);
+      stringN = String.valueOf(N+6);
 
       borderParticles = sb.toString();
 
