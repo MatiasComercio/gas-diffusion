@@ -168,11 +168,16 @@ public class Main {
         System.out.println("Printing");
       }
       fraction = gasDiffusion.getFraction();
-    }
+    } while(fraction > 0.5 || i<100);
 
 
   }
 
+  /**
+   * Format:  ID X Y Vx Vy R G B
+   * @param updatedParticles set of particles to be persisted
+   * @param iteration the iteration number
+   */
   private static void generateOutputDatFile(final Set<Point> updatedParticles, final long iteration) {
     // save data to a new file
 
@@ -384,8 +389,9 @@ public class Main {
   private static void generateDynamicDatFile(final StaticData staticData) {
     final PointFactory pF = PointFactory.getInstance();
 
-    final Point leftBottomPoint = Point.builder(0, 0).build();
-    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).build();
+    final Point leftBottomPoint = Point.builder(0, 0).speed(0).orientation(0).build();
+    //final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
+    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).speed(0).orientation(0).build();
 
     final Set<Point> pointsSet = pF.randomPoints(leftBottomPoint, rightTopPoint,
             staticData.radios, false, Integer.MAX_VALUE, staticData.speed, staticData.mass);
@@ -544,10 +550,12 @@ public class Main {
       String stringN; // N as string
       String iterationNum, borderParticles;
       int N;
-      final double L;
+      final double L, W;
       final Iterator<String> staticDatIterator;
       final Iterator<String> outputDatIterator;
       final StringBuilder sb = new StringBuilder();
+
+      final StaticData staticData = loadStaticFile(staticFile);
 
       writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile()));
       staticDatIterator = staticDatStream.iterator();
@@ -556,7 +564,11 @@ public class Main {
       // Write number of particles
       stringN = staticDatIterator.next();
       N = Integer.valueOf(stringN);
-      L = Double.valueOf(staticDatIterator.next());
+
+      //L = Double.valueOf(staticDatIterator.next());
+      //W = Double.valueOf(staticDatIterator.next());
+      L = staticData.L;
+      W = staticData.W;
 
       // Create virtual particles in the borders, in order for Ovito to show the whole board
       sb.append(N+1).append('\t').append(0).append('\t').append(0).append('\t').append(0)
@@ -569,12 +581,12 @@ public class Main {
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
-      sb.append(N+3).append('\t').append(L).append('\t').append(0).append('\t').append(0)
+      sb.append(N+3).append('\t').append(W).append('\t').append(0).append('\t').append(0)
               .append('\t').append(0).append('\t')
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
-      sb.append(N+4).append('\t').append(L).append('\t').append(L).append('\t').append(0)
+      sb.append(N+4).append('\t').append(W).append('\t').append(L).append('\t').append(0)
               .append('\t').append(0).append('\t')
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
