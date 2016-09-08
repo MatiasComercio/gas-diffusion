@@ -6,7 +6,7 @@ import ar.edu.itba.ss.gasdiffusion.services.GeometricEquations;
 import java.util.HashSet;
 import java.util.Set;
 
-public class GasDiffusion {
+class GasDiffusion {
     //private final Queue<Event> pq;
     private double currentTime;
     private final double L;
@@ -15,7 +15,7 @@ public class GasDiffusion {
     private double fraction;
 
 
-    public GasDiffusion(final double L, final double W, final double opening) {
+    GasDiffusion(final double L, final double W, final double opening) {
         //pq = new PriorityQueue<>();
         currentTime = 0;
         this.L = L;
@@ -24,39 +24,41 @@ public class GasDiffusion {
         this.fraction = 0;
     }
 
-    public Set<Point> run(Set<Point> points) {
+    Set<Point> run(Set<Point> points) {
 
         Set<Point> updatedParticles = new HashSet<>();
         Event currentEvent, minEvent = null;
         fraction = 0;
         currentTime = 0;
 
+        System.out.println(points);
+
         // Calculate the closest event
-        for(Point point : points){
+        for(final Point point : points){
             currentEvent = predictCollisions(point, points);
-            if(minEvent == null || currentEvent.compareTo(minEvent) < 0 ){
+            if(minEvent == null || currentEvent.compareTo(minEvent) < 0){
                 minEvent = currentEvent;
             }
         }
 
-        // Update the position of all particles (Including the ones that collided)
-        for(Point point : points){
-            updatedParticles.add(GeometricEquations.movePoint(point, minEvent.getTime()));
-            if(point.x() <= this.W/2){ // Calculates the fraction before moving particles
-                fraction++;
+        if (minEvent != null) {
+            // Update the position of all particles (Including the ones that collided)
+            for(final Point point : points){
+                updatedParticles.add(GeometricEquations.movePoint(point, minEvent.getTime()));
+                if(point.x() <= this.W/2){ // Calculates the fraction before moving particles
+                    fraction++;
+                }
             }
+
+            final Set<Point> collisionParticles = minEvent.execute();
+
+            // Remove the particles that collided, and add them again with updated velocity
+            updatedParticles.removeAll(collisionParticles);
+            updatedParticles.addAll(collisionParticles);
+
+            fraction /= points.size();
+            currentTime = minEvent.getTime();
         }
-
-        // Remove the particles that collided, and add them again with updated velocity
-        Set<Point> collisionParticles = minEvent.execute();
-        updatedParticles.removeAll(collisionParticles); // This is done, because the set does not replace elements
-
-        for(Point  point: collisionParticles){
-            updatedParticles.add(point);
-        }
-
-        fraction /= points.size();
-        currentTime = minEvent.getTime();
 
         return updatedParticles;
 
@@ -67,7 +69,7 @@ public class GasDiffusion {
      * @param point a given point
      * @param points the collection of points to be checked against the given point
      */
-    public Event predictCollisions(final Point point, final Set<Point> points) {
+    private Event predictCollisions(final Point point, final Set<Point> points) {
         Event pointEvent = null, hWallEvent, vWallEvent, minEvent;
         double tc;
 
@@ -99,7 +101,7 @@ public class GasDiffusion {
         tc = GeometricEquations.timeToHitWall(point, Wall.VERTICAL, 0, W);
         vWallEvent = new WallEvent(tc, point, Wall.VERTICAL);
 
-        if(minEvent == null || vWallEvent.getTime() < minEvent.getTime()){
+        if(vWallEvent.getTime() < minEvent.getTime()){
             minEvent = vWallEvent;
         }
 
@@ -110,11 +112,11 @@ public class GasDiffusion {
         return minEvent;
     }
 
-    public double getFraction() {
+    double getFraction() {
         return fraction;
     }
 
-    public double getCurrentTime() {
+    double getCurrentTime() {
         return currentTime;
     }
 }

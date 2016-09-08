@@ -19,9 +19,9 @@ public class WallEvent extends Event {
         Point newPoint = null;
 
         if(wall == Wall.VERTICAL) {
-            newPoint = point.withVx(-1 * point.vx());
+            newPoint = point.movePoint(time).withVx(-1 * point.vx());
         } else if (wall == Wall.HORIZONTAL) {
-            newPoint = point.withVy(-1 * point.vy());
+            newPoint = point.movePoint(time).withVy(-1 * point.vy());
         }
 
         points.add(

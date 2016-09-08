@@ -44,8 +44,8 @@ public class PointsEvent extends Event {
         final double nextVx2 = p2.vx() - Jx / p2.mass();
         final double nextVy2 = p2.vy() - Jy / p2.mass();
 
-        final Point nextPoint1 = p1.withVx(nextVx1).withVy(nextVy1);
-        final Point nextPoint2 = p2.withVx(nextVx2).withVy(nextVy2);
+        final Point nextPoint1 = p1.movePoint(time).withVx(nextVx1).withVy(nextVy1);
+        final Point nextPoint2 = p2.movePoint(time).withVx(nextVx2).withVy(nextVy2);
 
         newPoints.add(nextPoint1);
         newPoints.add(nextPoint2);
