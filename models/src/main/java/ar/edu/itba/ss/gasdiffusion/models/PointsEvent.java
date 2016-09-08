@@ -41,25 +41,15 @@ public class PointsEvent extends Event {
         final double nextVx1 = p1.vx() + Jx / p1.mass();
         final double nextVy1 = p1.vy() + Jy / p1.mass();
 
-        // TODO: I can calculate the next speed components for p2, the problem is that i can't return two new points
         final double nextVx2 = p2.vx() - Jx / p2.mass();
         final double nextVy2 = p2.vy() - Jy / p2.mass();
 
-        final Point nextPoint1 = p1.withOrientation(
-                Math.atan(nextVy1 / nextVx1)
-        );
-
-        final Point nextPoint2 = p2.withOrientation(
-                Math.atan(nextVy2 / nextVx2)
-        );
+        final Point nextPoint1 = p1.withVx(nextVx1).withVy(nextVy1);
+        final Point nextPoint2 = p2.withVx(nextVx2).withVy(nextVy2);
 
         newPoints.add(nextPoint1);
         newPoints.add(nextPoint2);
 
         return newPoints;
     }
-
-    // TODO: Not sure if something else should go here
-
-    // Particle's orientation becomes NaN??
 }

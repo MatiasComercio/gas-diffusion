@@ -38,6 +38,20 @@ public abstract class PointAbs {
 		return 0;
 	}
 
+	@Value.Default
+	@Value.Auxiliary
+	public double vx() {
+		return 0;
+	}
+
+	@Value.Default
+	@Value.Auxiliary
+	public double vy() {
+		return 0;
+	}
+
+
+
 	@Value.Check
 	protected void checkRadio() {
 		if (radio() < 0) {
@@ -45,10 +59,10 @@ public abstract class PointAbs {
 		}
 	}
 
-	@Value.Default
+	@Value.Derived
 	@Value.Auxiliary
 	public double speed() {
-		return 0;
+		return Math.sqrt(Math.pow(vx(), 2) + Math.pow(vy(), 2));
 	}
 
 	@Value.Check
@@ -58,27 +72,7 @@ public abstract class PointAbs {
 		}
 	}
 
-	@Value.Default
-	@Value.Auxiliary
-	public double orientation(){
-		return 0;
-	}
 
-	@Value.Derived
-	//@Value.Default
-	@Value.Auxiliary
-	public double vx() {
-		return speed() * Math.cos(orientation());
-	}
-
-	@Value.Derived
-	//@Value.Default
-	@Value.Auxiliary
-	public double vy() {
-		return speed() * Math.sin(orientation());
-	}
-
-	
 	/**
 	 * Prints the immutable value {@code Point} with attribute values.
 	 * @return A string representation of the value
@@ -90,11 +84,13 @@ public abstract class PointAbs {
 						+ ", x=" + x()
 						+ ", y=" + y()
 						+ ", radio=" + radio()
-						+ ", speed=" + speed()
-						+ ", orientation=" + orientation()
+						+ ", vx=" + vx()
+						+ ", vy=" + vy()
 						+ "}";
 	}
-	
+
+
+
 	/* for testing purposes only */
 	public static void resetIdGen() {
 		idGen = 0;

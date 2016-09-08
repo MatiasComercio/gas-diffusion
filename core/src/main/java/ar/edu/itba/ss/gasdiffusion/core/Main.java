@@ -155,19 +155,20 @@ public class Main {
 
     GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-    double fraction = 0, currentTime = 0;
-    long i = 0;
+    double fraction = 1.0, currentTime = 0;
+    long maxIterations = 100;
 
-    do{
+    for(long i = 0; i < 100000/* fraction > 0.5 */; i++) {
       points = gasDiffusion.run(points);
       currentTime += gasDiffusion.getCurrentTime(); // Time left to reach dt2
-
-      if(currentTime >= dt2){
-        generateOutputDatFile(points, i);
-        currentTime -= dt2;
+      System.out.println(fraction);
+      if (currentTime >= dt2) {
+        currentTime = 0.0; // reset time counter
+        generateOutputDatFile(points, i); // save to file the current configuration
+        System.out.println("Printing");
       }
       fraction = gasDiffusion.getFraction();
-    } while(fraction > 0.5 || i<100);
+    }
 
 
   }
@@ -383,9 +384,8 @@ public class Main {
   private static void generateDynamicDatFile(final StaticData staticData) {
     final PointFactory pF = PointFactory.getInstance();
 
-    final Point leftBottomPoint = Point.builder(0, 0).speed(0).orientation(0).build();
-    //final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
-    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).speed(0).orientation(0).build();
+    final Point leftBottomPoint = Point.builder(0, 0).build();
+    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).build();
 
     final Set<Point> pointsSet = pF.randomPoints(leftBottomPoint, rightTopPoint,
             staticData.radios, false, Integer.MAX_VALUE, staticData.speed, staticData.mass);
@@ -438,8 +438,12 @@ public class Main {
   private static String pointsToString(final Set<Point> pointsSet) {
     final StringBuffer sb = new StringBuffer();
     sb.append(0).append('\n');
-    pointsSet.forEach(point -> sb.append(point.x()).append('\t').append(point.y()).append('\t')
-            .append(point.orientation()).append('\n'));
+    pointsSet.forEach(point -> sb
+            .append(point.x()).append('\t')
+            .append(point.y()).append('\t')
+            .append(point.vx()).append('\t')
+            .append(point.vy()).append('\t')
+            .append('\n'));
     return sb.toString();
   }
   // Used for building output.dat
@@ -450,15 +454,18 @@ public class Main {
     double vax = 0;
     double vay = 0;
     double v = 0;
-    for (Point point : pointsSet) {
-      vx = point.speed() * Math.cos(point.orientation());
-      vy = point.speed() * Math.sin(point.orientation());
+    double orientation;
+
+    for (final Point point : pointsSet) {
+      vx = point.vx();
+      vy = point.vy();
+      orientation = Math.tan(vy / vx);
       vax += vx;
       vay += vy;
       v += point.speed();
-      r = Math.cos(point.orientation());
-      g = Math.sin(point.orientation());
-      b = Math.cos(point.orientation()) * Math.sin(point.orientation());
+      r = Math.cos(orientation);
+      g = Math.sin(orientation);
+      b = Math.cos(orientation) * Math.sin(orientation);
       sb.append(point.id()).append('\t')
               // position
               .append(point.x()).append('\t').append(point.y()).append('\t')
@@ -730,14 +737,14 @@ public class Main {
       // skip time t0
       dynamicFileLines.next();
 
-      double x, y, orientation;
+      double x, y, vx, vy;
       for (int i = 0 ; i < staticData.radios.length ; i++) {
         final Scanner intScanner = new Scanner(dynamicFileLines.next());
         x = intScanner.nextDouble(); // caught InputMismatchException
         y = intScanner.nextDouble(); // caught InputMismatchException
-        orientation = intScanner.nextDouble();
-        points.add(Point.builder(x,y).radio(staticData.radios[i]).speed(staticData.speed)
-                .orientation(orientation).mass(staticData.mass).build());
+        vx = intScanner.nextDouble();
+        vy = intScanner.nextDouble();
+        points.add(Point.builder(x,y).radio(staticData.radios[i]).vx(vx).vy(vy).mass(staticData.mass).build());
       }
 
     } catch (IOException e) {

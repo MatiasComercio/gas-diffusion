@@ -16,19 +16,16 @@ public class WallEvent extends Event {
     @Override
     public Set<Point> execute() {
         final Set<Point> points = new HashSet<>();
-        double orientation = 0.0;
+        Point newPoint = null;
 
         if(wall == Wall.VERTICAL) {
-            //orientation = Math.acos(-1 * point.vx() / point.speed());
-            orientation = Math.atan( ((-1) * point.vy()) / point.vx());
+            newPoint = point.withVx(-1 * point.vx());
         } else if (wall == Wall.HORIZONTAL) {
-            //orientation = Math.asin(-1 * point.vy() / point.speed());
-            orientation = Math.atan(point.vy() / ( (-1) * point.vx()));
+            newPoint = point.withVy(-1 * point.vy());
         }
 
         points.add(
-                //point.withSpeed(orientation)
-                point.withOrientation(orientation)
+                newPoint
         );
 
         return points;
