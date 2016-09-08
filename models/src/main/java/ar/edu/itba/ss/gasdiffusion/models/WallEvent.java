@@ -27,8 +27,7 @@ public class WallEvent extends Event {
         }
 
         points.add(
-                //point.withSpeed(orientation)
-                point.withOrientation(orientation)
+                point.movePoint(time).withOrientation(orientation)
         );
 
         return points;

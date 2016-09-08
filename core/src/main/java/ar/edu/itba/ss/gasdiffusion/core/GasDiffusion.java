@@ -50,8 +50,9 @@ public class GasDiffusion {
         // Remove the particles that collided, and add them again with updated velocity
         Set<Point> collisionParticles = minEvent.execute();
         updatedParticles.removeAll(collisionParticles); // This is done, because the set does not replace elements
+
         for(Point  point: collisionParticles){
-            updatedParticles.add(GeometricEquations.movePoint(point, minEvent.getTime()));
+            updatedParticles.add(point);
         }
 
         fraction /= points.size();
@@ -63,8 +64,8 @@ public class GasDiffusion {
 
     /**
      * Predict the next events (collisions) and add them to a priority queue
-     * @param point
-     * @param points
+     * @param point a given point
+     * @param points the collection of points to be checked against the given point
      */
     public Event predictCollisions(final Point point, final Set<Point> points) {
         Event pointEvent = null, hWallEvent, vWallEvent, minEvent;
@@ -99,7 +100,7 @@ public class GasDiffusion {
         vWallEvent = new WallEvent(tc, point, Wall.VERTICAL);
 
         if(minEvent == null || vWallEvent.getTime() < minEvent.getTime()){
-            minEvent = hWallEvent;
+            minEvent = vWallEvent;
         }
 
         //TODO: Check collisions with wall in the middle

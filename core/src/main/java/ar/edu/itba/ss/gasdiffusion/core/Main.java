@@ -155,8 +155,8 @@ public class Main {
 
     GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-    double fraction = 0, currentTime = 0;
-    long i = 0;
+    double fraction, currentTime = 0;
+    long i = 0; // TODO: Remove iteration counter from while condition
 
     do{
       points = gasDiffusion.run(points);
@@ -167,11 +167,16 @@ public class Main {
         currentTime -= dt2;
       }
       fraction = gasDiffusion.getFraction();
-    } while(fraction > 0.5 || i<100);
+    } while(fraction > 0.5 || i++<10);
 
 
   }
 
+  /**
+   * Format:  ID X Y Vx Vy R G B
+   * @param updatedParticles set of particles to be persisted
+   * @param iteration the iteration number
+   */
   private static void generateOutputDatFile(final Set<Point> updatedParticles, final long iteration) {
     // save data to a new file
 
@@ -537,10 +542,12 @@ public class Main {
       String stringN; // N as string
       String iterationNum, borderParticles;
       int N;
-      final double L;
+      final double L, W;
       final Iterator<String> staticDatIterator;
       final Iterator<String> outputDatIterator;
       final StringBuilder sb = new StringBuilder();
+
+      final StaticData staticData = loadStaticFile(staticFile);
 
       writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile()));
       staticDatIterator = staticDatStream.iterator();
@@ -549,7 +556,11 @@ public class Main {
       // Write number of particles
       stringN = staticDatIterator.next();
       N = Integer.valueOf(stringN);
-      L = Double.valueOf(staticDatIterator.next());
+
+      //L = Double.valueOf(staticDatIterator.next());
+      //W = Double.valueOf(staticDatIterator.next());
+      L = staticData.L;
+      W = staticData.W;
 
       // Create virtual particles in the borders, in order for Ovito to show the whole board
       sb.append(N+1).append('\t').append(0).append('\t').append(0).append('\t').append(0)
@@ -562,12 +573,12 @@ public class Main {
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
-      sb.append(N+3).append('\t').append(L).append('\t').append(0).append('\t').append(0)
+      sb.append(N+3).append('\t').append(W).append('\t').append(0).append('\t').append(0)
               .append('\t').append(0).append('\t')
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
-      sb.append(N+4).append('\t').append(L).append('\t').append(L).append('\t').append(0)
+      sb.append(N+4).append('\t').append(W).append('\t').append(L).append('\t').append(0)
               .append('\t').append(0).append('\t')
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)

@@ -45,11 +45,11 @@ public class PointsEvent extends Event {
         final double nextVx2 = p2.vx() - Jx / p2.mass();
         final double nextVy2 = p2.vy() - Jy / p2.mass();
 
-        final Point nextPoint1 = p1.withOrientation(
+        final Point nextPoint1 = p1.movePoint(time).withOrientation(
                 Math.atan(nextVy1 / nextVx1)
         );
 
-        final Point nextPoint2 = p2.withOrientation(
+        final Point nextPoint2 = p2.movePoint(time).withOrientation(
                 Math.atan(nextVy2 / nextVx2)
         );
 
@@ -61,5 +61,4 @@ public class PointsEvent extends Event {
 
     // TODO: Not sure if something else should go here
 
-    // Particle's orientation becomes NaN??
 }
