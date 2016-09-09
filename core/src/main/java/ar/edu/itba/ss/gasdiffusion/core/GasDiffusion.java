@@ -2,105 +2,99 @@ package ar.edu.itba.ss.gasdiffusion.core;
 
 import ar.edu.itba.ss.gasdiffusion.models.*;
 import ar.edu.itba.ss.gasdiffusion.services.GeometricEquations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
-public class GasDiffusion {
-    //private final Queue<Event> pq;
-    private double currentTime;
+class GasDiffusion {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+
     private final double L;
     private final double W;
     private final double opening;
     private double fraction;
+    private double collisionTime;
 
 
-    public GasDiffusion(final double L, final double W, final double opening) {
-        //pq = new PriorityQueue<>();
-        currentTime = 0;
+    GasDiffusion(final double L, final double W, final double opening) {
         this.L = L;
         this.W = W;
         this.opening = opening;
         this.fraction = 0;
+        collisionTime = 0;
     }
 
-    public Set<Point> run(Set<Point> points) {
+    List<Point> run(final List<Point> points) {
+        final List<Point> updatedParticles = new ArrayList<>();
 
-        Set<Point> updatedParticles = new HashSet<>();
-        Event currentEvent, minEvent = null;
         fraction = 0;
-        currentTime = 0;
+        collisionTime = 0; //TODO: This should not be reset
 
-        // Calculate the closest event
-        for(Point point : points){
-            currentEvent = predictCollisions(point, points);
-            if(minEvent == null || currentEvent.compareTo(minEvent) < 0 ){
-                minEvent = currentEvent;
+        final Event minEvent = predictCollisions(points);
+
+        // If there existed at least a collision and that collision has the min. tc
+        if (minEvent != null) {
+            // Update the position of all particles (Including the ones that collided)
+            for(final Point point : points) {
+                updatedParticles.add(GeometricEquations.movePoint(point, minEvent.getTime()));
+                if(point.x() <= this.W/2){ // Calculates the fraction before moving particles
+                    fraction++;
+                }
             }
+
+            final Set<Point> collisionParticles = minEvent.execute();
+
+            // Remove the particles that take part in an event, and add them again with updated velocity and position
+            updatedParticles.removeAll(collisionParticles);
+            updatedParticles.addAll(collisionParticles);
+
+            fraction /= points.size();
+            collisionTime = minEvent.getTime();
+        } else {
+            LOGGER.debug("There does not exist a collision. Skipping particle update...");
         }
-
-        // Update the position of all particles (Including the ones that collided)
-        for(Point point : points){
-            updatedParticles.add(GeometricEquations.movePoint(point, minEvent.getTime()));
-            if(point.x() <= this.W/2){ // Calculates the fraction before moving particles
-                fraction++;
-            }
-        }
-
-        // Remove the particles that collided, and add them again with updated velocity
-        Set<Point> collisionParticles = minEvent.execute();
-        updatedParticles.removeAll(collisionParticles); // This is done, because the set does not replace elements
-
-        for(Point  point: collisionParticles){
-            updatedParticles.add(point);
-        }
-
-        fraction /= points.size();
-        currentTime = minEvent.getTime();
 
         return updatedParticles;
 
     }
 
     /**
-     * Predict the next events (collisions) and add them to a priority queue
-     * @param point a given point
+     * Predict the next events (collisions)
      * @param points the collection of points to be checked against the given point
      */
-    public Event predictCollisions(final Point point, final Set<Point> points) {
-        Event pointEvent = null, hWallEvent, vWallEvent, minEvent;
+    private Event predictCollisions(final List<Point> points) {
+        Event minEvent = null, hWallEvent, vWallEvent;
         double tc;
 
-        /**
-         * Improve by receiving an array and iterate from the i+1 point to avoid having twice the events in the
-         * priority queue
-         */
-        // Calculate the collision between the given point and all the remaining points
-        for(Point currentPoint : points) {
-            if(!point.equals(currentPoint)) {
-                tc = GeometricEquations.collisionTime(point, currentPoint);
-                if(pointEvent == null || tc < pointEvent.getTime()){
-                    pointEvent = new PointsEvent(tc, point, currentPoint);
+        for(int i = 0; i < points.size(); i++) {
+            final Point point = points.get(i);
+            for(int j = i + 1; j < points.size(); j++) {
+                final Point pointToCompare = points.get(j);
+
+                tc = GeometricEquations.collisionTime(point, pointToCompare);
+                if(minEvent == null || tc < minEvent.getTime()) {
+                    minEvent = new PointsEvent(tc, point, pointToCompare);
                 }
             }
-        }
 
-        minEvent = pointEvent;
+            // Calculate the collision between the given point and one of the horizontal walls
+            tc = GeometricEquations.timeToHitWall(point, Wall.HORIZONTAL, 0, L);
+            hWallEvent = new WallEvent(tc, point, Wall.HORIZONTAL);
 
-        // Calculate the collision between the given point and one of the horizontal walls
-        tc = GeometricEquations.timeToHitWall(point, Wall.HORIZONTAL, 0, L);
-        hWallEvent = new WallEvent(tc, point, Wall.HORIZONTAL);
+            if(minEvent == null || hWallEvent.getTime() < minEvent.getTime()){
+                minEvent = hWallEvent;
+            }
 
-        if(minEvent == null || hWallEvent.getTime() < minEvent.getTime()){
-            minEvent = hWallEvent;
-        }
+            // Calculate the collision between the given point and one of the vertical walls
+            tc = GeometricEquations.timeToHitWall(point, Wall.VERTICAL, 0, W);
+            vWallEvent = new WallEvent(tc, point, Wall.VERTICAL);
 
-        // Calculate the collision between the given point and one of the vertical walls
-        tc = GeometricEquations.timeToHitWall(point, Wall.VERTICAL, 0, W);
-        vWallEvent = new WallEvent(tc, point, Wall.VERTICAL);
-
-        if(minEvent == null || vWallEvent.getTime() < minEvent.getTime()){
-            minEvent = vWallEvent;
+            if(vWallEvent.getTime() < minEvent.getTime()) {
+                minEvent = vWallEvent;
+            }
         }
 
         //TODO: Check collisions with wall in the middle
@@ -110,11 +104,11 @@ public class GasDiffusion {
         return minEvent;
     }
 
-    public double getFraction() {
+    double getFraction() {
         return fraction;
     }
 
-    public double getCurrentTime() {
-        return currentTime;
+    double getCollisionTime() {
+        return collisionTime;
     }
 }

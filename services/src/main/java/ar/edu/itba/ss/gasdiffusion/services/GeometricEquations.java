@@ -71,10 +71,10 @@ public abstract class GeometricEquations {
         double r = 0.0;
 
         if(wall == Wall.HORIZONTAL) {
-            v = point.speed() * Math.sin(point.orientation());
+            v = point.vy();
             r = point.y();
         } else if(wall == Wall.VERTICAL) {
-            v = point.speed() * Math.cos(point.orientation());
+            v = point.vx();
             r = point.x();
         }
 
@@ -120,13 +120,8 @@ public abstract class GeometricEquations {
         final double nextVx2 = p2.vx() - Jx / p2.mass();
         final double nextVy2 = p2.vy() - Jy / p2.mass();
 
-        final Point nextPoint1 = p1.withOrientation(
-                Math.acos(nextVx1 / p1.speed())
-        );
-
-        final Point nextPoint2 = p2.withOrientation(
-                Math.acos(nextVx2 / p2.speed())
-        );
+        final Point nextPoint1 = p1.withVx(nextVx1).withVy(nextVy1);
+        final Point nextPoint2 = p2.withVx(nextVx2).withVy(nextVy2);
 
         newPoints.add(nextPoint1);
         newPoints.add(nextPoint2);

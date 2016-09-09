@@ -6,7 +6,7 @@ public abstract class Event implements Comparable<Event> {
     final double time; // Time has to go here because we need that all the implementations of the Comparable to be equal
 
     /* Package Private */
-    Event(double time) {
+    Event(final double time) {
         this.time = time;
     }
 

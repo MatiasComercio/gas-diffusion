@@ -104,7 +104,7 @@ public class Main {
     // create points' set with static and dynamic files
     final StaticData staticData = loadStaticFile(args[1]);
 
-    Set<Point> points = loadDynamicFile(args[2], staticData);
+    List<Point> points = new ArrayList<>(loadDynamicFile(args[2], staticData));
 
     double dt2 = 0;
     try {
@@ -153,21 +153,21 @@ public class Main {
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
 
-    GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
+    final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-    double fraction, currentTime = 0;
-    long i = 0; // TODO: Remove iteration counter from while condition
+    double fraction = 1.0, currentTime = 0;
+    long maxIterations = 100;
 
-    do{
+    for(long i = 0; i < maxIterations /* && fraction > 0.5 */; i++) { //TODO: Finish by fractionParticles and not by number of iterations
       points = gasDiffusion.run(points);
-      currentTime += gasDiffusion.getCurrentTime(); // Time left to reach dt2
+      currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
 
-      if(currentTime >= dt2){
-        generateOutputDatFile(points, i);
-        currentTime -= dt2;
+      if (currentTime >= dt2) {
+        currentTime = 0.0; // reset time counter
+        generateOutputDatFile(points, i); // save to file the current configuration
       }
       fraction = gasDiffusion.getFraction();
-    } while(fraction > 0.5 || i++<10);
+    }
 
 
   }
@@ -177,19 +177,10 @@ public class Main {
    * @param updatedParticles set of particles to be persisted
    * @param iteration the iteration number
    */
-  private static void generateOutputDatFile(final Set<Point> updatedParticles, final long iteration) {
-    // save data to a new file
-
-//        final File dataFolder = new File(DESTINATION_FOLDER);
-//        dataFolder.mkdirs(); // tries to make directories for the .dat files
-//
-//		/* delete previous dynamic.dat file, if any */
+  private static void generateOutputDatFile(final Collection<Point> updatedParticles, final long iteration) {
+    /* delete previous dynamic.dat file, if any */
     final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
     final Path pathToVaFile = Paths.get(DESTINATION_FOLDER, VA_FILE);
-//
-//        if(!deleteIfExists(pathToDatFile)) {
-//            return;
-//        }
 
     /* write the new output.dat file */
     final String[] data = pointsToString(updatedParticles, iteration);
@@ -198,13 +189,9 @@ public class Main {
     BufferedWriter va_writer = null;
     try {
       writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
-//            writer.write(String.valueOf(updatedParticles.size()));
-//            writer.write("\n");
       writer.write(data[0]);
 
       va_writer = new BufferedWriter(new FileWriter(pathToVaFile.toFile(), true));
-//            va_writer.write(String.valueOf(iteration));
-//            va_writer.write(",");
       va_writer.write(data[1]); // write va data
       va_writer.write("\n");
 
@@ -388,9 +375,8 @@ public class Main {
   private static void generateDynamicDatFile(final StaticData staticData) {
     final PointFactory pF = PointFactory.getInstance();
 
-    final Point leftBottomPoint = Point.builder(0, 0).speed(0).orientation(0).build();
-    //final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
-    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).speed(0).orientation(0).build();
+    final Point leftBottomPoint = Point.builder(0, 0).vx(0).vy(0).build();
+    final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).vx(0).vy(0).build();
 
     final Set<Point> pointsSet = pF.randomPoints(leftBottomPoint, rightTopPoint,
             staticData.radios, false, Integer.MAX_VALUE, staticData.speed, staticData.mass);
@@ -443,27 +429,34 @@ public class Main {
   private static String pointsToString(final Set<Point> pointsSet) {
     final StringBuffer sb = new StringBuffer();
     sb.append(0).append('\n');
-    pointsSet.forEach(point -> sb.append(point.x()).append('\t').append(point.y()).append('\t')
-            .append(point.orientation()).append('\n'));
+    pointsSet.forEach(point -> sb
+            .append(point.x()).append('\t')
+            .append(point.y()).append('\t')
+            .append(point.vx()).append('\t')
+            .append(point.vy()).append('\t')
+            .append('\n'));
     return sb.toString();
   }
   // Used for building output.dat
-  private static String[] pointsToString(final Set<Point> pointsSet, final long iteration) {
+  private static String[] pointsToString(final Collection<Point> pointsSet, final long iteration) {
     final StringBuilder sb = new StringBuilder();
     sb.append(iteration).append('\n');
     double vx, vy, r, g, b;
     double vax = 0;
     double vay = 0;
     double v = 0;
-    for (Point point : pointsSet) {
-      vx = point.speed() * Math.cos(point.orientation());
-      vy = point.speed() * Math.sin(point.orientation());
+    double orientation;
+
+    for (final Point point : pointsSet) {
+      vx = point.vx();
+      vy = point.vy();
+      orientation = Math.tan(vy / vx);
       vax += vx;
       vay += vy;
       v += point.speed();
-      r = Math.cos(point.orientation());
-      g = Math.sin(point.orientation());
-      b = Math.cos(point.orientation()) * Math.sin(point.orientation());
+      r = Math.cos(orientation);
+      g = Math.sin(orientation);
+      b = Math.cos(orientation) * Math.sin(orientation);
       sb.append(point.id()).append('\t')
               // position
               .append(point.x()).append('\t').append(point.y()).append('\t')
@@ -583,8 +576,18 @@ public class Main {
               // color: black
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
+      sb.append(N+5).append('\t').append(W/2).append('\t').append(0).append('\t').append(0)
+              .append('\t').append(0).append('\t')
+              // color: black
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+      sb.append(N+6).append('\t').append(W/2).append('\t').append(L).append('\t').append(0)
+              .append('\t').append(0).append('\t')
+              // color: black
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
 
-      stringN = String.valueOf(N+4);
+      stringN = String.valueOf(N+6);
 
       borderParticles = sb.toString();
 
@@ -741,14 +744,14 @@ public class Main {
       // skip time t0
       dynamicFileLines.next();
 
-      double x, y, orientation;
+      double x, y, vx, vy;
       for (int i = 0 ; i < staticData.radios.length ; i++) {
         final Scanner intScanner = new Scanner(dynamicFileLines.next());
         x = intScanner.nextDouble(); // caught InputMismatchException
         y = intScanner.nextDouble(); // caught InputMismatchException
-        orientation = intScanner.nextDouble();
-        points.add(Point.builder(x,y).radio(staticData.radios[i]).speed(staticData.speed)
-                .orientation(orientation).mass(staticData.mass).build());
+        vx = intScanner.nextDouble();
+        vy = intScanner.nextDouble();
+        points.add(Point.builder(x,y).radio(staticData.radios[i]).vx(vx).vy(vy).mass(staticData.mass).build());
       }
 
     } catch (IOException e) {

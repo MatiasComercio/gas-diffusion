@@ -58,7 +58,12 @@ public class PointFactory {
                 pR = radios[i] <= -1 ? 0 : radios[i];
                 pOrientation = RandomInRange.randomDouble(0, 2 * Math.PI);
 
-                p = Point.builder(pX, pY).mass(mass).radio(pR).orientation(pOrientation).speed(speed).build();
+                p = Point.builder(pX, pY)
+                        .mass(mass)
+                        .radio(pR)
+                        .vx(speed * Math.cos(pOrientation))
+                        .vy(speed * Math.sin(pOrientation))
+                        .build();
 
                 tries ++;
                 if (tries > maxTries) {
