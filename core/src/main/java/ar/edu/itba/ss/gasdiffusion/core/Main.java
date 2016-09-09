@@ -163,7 +163,7 @@ public class Main {
       currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
 
       if (currentTime >= dt2) {
-        currentTime = 0.0; // reset time counter
+        currentTime = 0.0; // reset time counter // TODO: For me it should be currentTime -= dt2;
         generateOutputDatFile(points, i); // save to file the current configuration
       }
       fraction = gasDiffusion.getFraction();
@@ -450,7 +450,7 @@ public class Main {
     for (final Point point : pointsSet) {
       vx = point.vx();
       vy = point.vy();
-      orientation = Math.tan(vy / vx);
+      orientation = Math.atan(vy / vx);
       vax += vx;
       vay += vy;
       v += point.speed();
