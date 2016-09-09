@@ -71,11 +71,9 @@ public abstract class GeometricEquations {
         double r = 0.0;
 
         if(wall == Wall.HORIZONTAL) {
-//            v = point.speed() * Math.sin(point.orientation());
             v = point.vy();
             r = point.y();
         } else if(wall == Wall.VERTICAL) {
-//            v = point.speed() * Math.cos(point.orientation());
             v = point.vx();
             r = point.x();
         }

@@ -376,7 +376,6 @@ public class Main {
     final PointFactory pF = PointFactory.getInstance();
 
     final Point leftBottomPoint = Point.builder(0, 0).vx(0).vy(0).build();
-    //final Point rightTopPoint = Point.builder(staticData.L, staticData.W / 2).speed(0).orientation(0).build();
     final Point rightTopPoint = Point.builder(staticData.W / 2, staticData.L).vx(0).vy(0).build();
 
     final Set<Point> pointsSet = pF.randomPoints(leftBottomPoint, rightTopPoint,
