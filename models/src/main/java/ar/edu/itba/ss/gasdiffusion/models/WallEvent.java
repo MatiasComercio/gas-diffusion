@@ -16,17 +16,12 @@ public class WallEvent extends Event {
     @Override
     public Set<Point> execute() {
         final Set<Point> points = new HashSet<>();
-        Point newPoint = null;
 
         if(wall == Wall.VERTICAL) {
-            newPoint = point.movePoint(time).withVx(-1 * point.vx());
+            points.add(point.updatePoint(time, -1 * point.vx(), point.vy()));
         } else if (wall == Wall.HORIZONTAL) {
-            newPoint = point.movePoint(time).withVy(-1 * point.vy());
+            points.add(point.updatePoint(time, point.vx(), -1 * point.vy()));
         }
-
-        points.add(
-                newPoint
-        );
 
         return points;
     }

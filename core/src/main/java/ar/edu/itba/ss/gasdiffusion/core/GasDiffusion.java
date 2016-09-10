@@ -24,7 +24,7 @@ class GasDiffusion {
         this.W = W;
         this.opening = opening;
         this.fraction = 0;
-        collisionTime = 0;
+        this.collisionTime = 0;
     }
 
     List<Point> run(final List<Point> points) {
@@ -34,36 +34,42 @@ class GasDiffusion {
         fraction = 0;
         collisionTime = 0;
 
+
+      if (points == null || points.size() == 0) { // nothing to process; avoid future division by zero (1)
+        return updatedParticles;
+      }
+
         minEvent = predictCollisions(points);
 
-        // If there existed at least a collision and that collision has the min. tc
-        if (!minEvent.isEmpty()) {
-            // Update the position of all particles (Including the ones that collided)
-            for(final Point point : points) {
-                updatedParticles.add(GeometricEquations.movePoint(point, minEvent.get(0).getTime()));
-                if(point.x() <= this.W/2){ // Calculates the fraction before moving particles
-                    fraction++;
-                }
-            }
-
-            Set<Point> collisionParticles;
-            for(Event event : minEvent){
-                collisionParticles = event.execute();
-
-                // Remove the particles that take part in an event, and add them again with updated velocity and position
-                updatedParticles.removeAll(collisionParticles);
-                updatedParticles.addAll(collisionParticles);
-
-            }
-
-            fraction /= points.size();
-            collisionTime = minEvent.get(0).getTime();
-        } else {
-            LOGGER.debug("There does not exist a collision. Skipping particle update...");
+        if (minEvent.isEmpty()) {
+          LOGGER.debug("There does not exist a collision. Skipping particle update...");
+          return updatedParticles;
         }
 
-        return updatedParticles;
+        // There existed at least a collision and that collision has the min. tc
+        // Update the position of all particles (Including the ones that collided)
+        final double tc = minEvent.get(0).getTime();
+        for(final Point point : points) {
+            // If particle is on the left side => add it to the current fraction counter
+            if (point.x() <= this.W/2) {
+              fraction++;
+            }
+            updatedParticles.add(point.updatePoint(tc));
+        }
 
+        Set<Point> collisionParticles;
+        for(Event event : minEvent){
+            collisionParticles = event.execute();
+
+            // Remove the particles that take part in an event, and add them again with updated velocity and position
+            updatedParticles.removeAll(collisionParticles);
+            updatedParticles.addAll(collisionParticles);
+        }
+
+        fraction /= points.size(); // (1) division by zero avoided as noticed at that reference
+        collisionTime = tc;
+
+        return updatedParticles;
     }
 
     /**
@@ -76,8 +82,6 @@ class GasDiffusion {
         double tc;
 
         for(int i = 0; i < points.size(); i++) {
-
-
             minEvent = null;
             final Point point = points.get(i);
 
@@ -90,6 +94,8 @@ class GasDiffusion {
                     minEvent = new PointsEvent(tc, point, pointToCompare);
                 }
             }
+
+            // +++ximprove: create event inside the if condition so as not to overhead with object creation
 
             // Calculate the collision between the given point and one of the horizontal walls
             tc = GeometricEquations.timeToHitWall(point, Wall.HORIZONTAL, 0, L);
@@ -117,6 +123,7 @@ class GasDiffusion {
 
             // In case the collision happens at the same time than the current events on the list, the event is added.
             // In case this events happens before, the list is replaced for a new one with lower collision time.
+          // +++ximprove: make the comparation only once and save the result
             if(eventList.isEmpty() ||  minEvent.compareTo(eventList.get(0)) == 0){
                 eventList.add(minEvent);
             } else if(minEvent.compareTo(eventList.get(0)) < 0){
@@ -131,7 +138,7 @@ class GasDiffusion {
         return eventList;
     }
 
-    double getFraction() {
+    double getLeftSideFraction() {
         return fraction;
     }
 

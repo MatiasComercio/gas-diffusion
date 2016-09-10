@@ -26,8 +26,10 @@ public class Main {
   private static final String STATIC_FILE = "static.dat";
   private static final String DYNAMIC_FILE = "dynamic.dat";
   private static final String OUTPUT_FILE = "output.dat";
-  private static final String VA_FILE = "t_va.csv";
+  private static final String DATA_FOR_GRAPHICS_FILE = "i_t_fp_pre_temp.csv";
   private static final String OVITO_FILE = "graphics.xyz";
+  private static final String TIME_TO_EQUILIBRIUM_FILE = "time_to_eq.csv";
+  private static final long MAX_TIME_AFTER_EQUILIBRIUM = 100;
   private static final String HELP_TEXT =
           "Gas Diffusion 2D Simulation Implementation.\n" +
                   "Arguments: \n" +
@@ -140,15 +142,14 @@ public class Main {
 
     /* delete previous dynamic.dat file, if any */
     final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
-    final Path pathToVaFile = Paths.get(DESTINATION_FOLDER, VA_FILE);
+    final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     if(!deleteIfExists(pathToDatFile)) {
       return;
     }
-    if(!deleteIfExists(pathToVaFile)) {
+    if(!deleteIfExists(pathToGraphicsFile)) {
       return;
     }
-    generateOutputDatFile(points, 0);
 
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
@@ -156,35 +157,125 @@ public class Main {
     final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
     double fraction = 1.0, currentTime = 0;
-    long maxIterations = 1000;
 
-    for(long i = 0; i < maxIterations /* && fraction > 0.5 */; i++) { //TODO: Finish by fractionParticles and not by number of iterations
+    int i = 0;
+
+    generateOutputDatFile(points, fraction, i, i * dt2);
+
+    i++;
+
+  // +++xcheck how to resume this into one metho
+    do {
       points = gasDiffusion.run(points);
+
+      if (points.isEmpty()) { // there was no collision indeed => end with a log message
+        LOGGER.info("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        System.out.println("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        break; // +++xcheck
+      }
+
       currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
 
-      if (currentTime >= dt2) {
-        //currentTime = 0.0; // reset time counter // TODO: For me it should be currentTime -= dt2;
-        currentTime -= dt2;
-        generateOutputDatFile(points, i); // save to file the current configuration
+      fraction = gasDiffusion.getLeftSideFraction();
+      if (currentTime >= dt2) { // don't save system's status if it's not the time
+        currentTime -= dt2; // adjust time counter to be the gap between the exact dt2 time and the real one
+        generateOutputDatFile(points, fraction, i, i*dt2); // save to file the current configuration
+        i++;
       }
-      fraction = gasDiffusion.getFraction();
+    } while (fraction > 0.5);
+
+    generateOutputDatFile(i, i*dt2, staticData);
+
+    long timeAfterEquilibrium = 0;
+    do {
+      points = gasDiffusion.run(points);
+
+      if (points.isEmpty()) { // there was no collision indeed => end with a log message
+        LOGGER.info("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        System.out.println("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        break; // +++xcheck
+      }
+
+      currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
+
+      fraction = gasDiffusion.getLeftSideFraction();
+      if (currentTime >= dt2) { // don't save system's status if it's not the time
+        currentTime -= dt2; // adjust time counter to be the gap between the exact dt2 time and the real one
+        generateOutputDatFile(points, fraction, i, i*dt2); // save to file the current configuration
+        i++;
+        timeAfterEquilibrium ++;
+      }
+    } while (timeAfterEquilibrium < MAX_TIME_AFTER_EQUILIBRIUM);
+  }
+
+  private static void generateOutputDatFile(final int i,
+                                            final double realTime,
+                                            final StaticData staticData) {
+    final Path pathToCsvFile = Paths.get(DESTINATION_FOLDER, TIME_TO_EQUILIBRIUM_FILE);
+
+    /* delete previous timeToEquilibrium.dat file, if any */
+    if(!deleteIfExists(pathToCsvFile)) {
+      return;
     }
 
+    final StringBuilder sb = new StringBuilder();
 
+    sb      .append("N,").append(staticData.N).append('\n')
+            .append("L,").append(staticData.L).append('\n')
+            .append("W,").append(staticData.W).append('\n')
+            .append("mass,").append(staticData.mass).append('\n')
+            .append("speed,").append(staticData.speed).append('\n')
+            .append("iteration,").append(i).append('\n')
+            .append("Real Time,").append(realTime).append('\n')
+            ;
+
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(pathToCsvFile.toFile(), true));
+      writer.write(sb.toString());
+
+    } catch (IOException e) {
+      LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToCsvFile, e);
+      System.out.println("[FAIL] - An unexpected error occurred while writing the file '" + pathToCsvFile + "'. \n" +
+              "Check the logs for more info.\n" +
+              "Aborting...");
+      exit(UNEXPECTED_ERROR);
+    } finally {
+      try {
+        // close the writer regardless of what happens...
+        if (writer != null) {
+          writer.close();
+        }
+      } catch (Exception ignored) {
+      }
+    }
   }
 
   /**
    * Format:  ID X Y Vx Vy R G B
    * @param updatedParticles set of particles to be persisted
    * @param iteration the iteration number
+   * @param realTime real time of the simulation (iteration number * dt2)
    */
-  private static void generateOutputDatFile(final Collection<Point> updatedParticles, final long iteration) {
+  private static void generateOutputDatFile(final Collection<Point> updatedParticles,
+                                            final double fraction,
+                                            final long iteration,
+                                            final double realTime) {
     /* delete previous dynamic.dat file, if any */
     final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
-    final Path pathToVaFile = Paths.get(DESTINATION_FOLDER, VA_FILE);
+    final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     /* write the new output.dat file */
-    final String[] data = pointsToString(updatedParticles, iteration);
+    final String[] data = pointsToString(updatedParticles, iteration); // +++xcheck: perhaps deprecated array
+
+    final StringBuilder sb = new StringBuilder();
+    sb      .append(iteration).append(',')
+            .append(realTime).append(',')
+            .append(fraction);
 
     BufferedWriter writer = null;
     BufferedWriter va_writer = null;
@@ -192,8 +283,8 @@ public class Main {
       writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
       writer.write(data[0]);
 
-      va_writer = new BufferedWriter(new FileWriter(pathToVaFile.toFile(), true));
-      va_writer.write(data[1]); // write va data
+      va_writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile(), true));
+      va_writer.write(sb.toString()); // write data for graphics
       va_writer.write("\n");
 
     } catch (IOException e) {
@@ -439,6 +530,7 @@ public class Main {
     return sb.toString();
   }
   // Used for building output.dat
+  // +++xtodo: check & update this
   private static String[] pointsToString(final Collection<Point> pointsSet, final long iteration) {
     final StringBuilder sb = new StringBuilder();
     sb.append(iteration).append('\n');
