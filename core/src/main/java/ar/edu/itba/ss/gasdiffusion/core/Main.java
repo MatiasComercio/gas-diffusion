@@ -156,7 +156,7 @@ public class Main {
     final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
     double fraction = 1.0, currentTime = 0;
-    long maxIterations = 100;
+    long maxIterations = 1000;
 
     for(long i = 0; i < maxIterations /* && fraction > 0.5 */; i++) { //TODO: Finish by fractionParticles and not by number of iterations
       points = gasDiffusion.run(points);
