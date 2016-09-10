@@ -2,15 +2,11 @@ package ar.edu.itba.ss.gasdiffusion.services;
 
 import ar.edu.itba.ss.gasdiffusion.models.Point;
 import ar.edu.itba.ss.gasdiffusion.models.Wall;
-
-import java.util.HashSet;
-import java.util.Set;
-
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 
 public abstract class GeometricEquations {
-    public static double distanceBetween(final Point p1, final Point p2) {
+    static double distanceBetween(final Point p1, final Point p2) {
         return sqrt(pow(p2.x() - p1.x(), 2) + pow(p2.y() - p1.y(), 2)) - p1.radio() - p2.radio();
     }
 
@@ -55,18 +51,16 @@ public abstract class GeometricEquations {
             return Double.POSITIVE_INFINITY;
         }
 
-        double time = -1 * (vr + sqrt(d)) / (vv);
-
-        return time;
+        return -1 * (vr + sqrt(d)) / (vv);
     }
 
     /**
      * Calculates the time when it collides with a horizontal wall
-     * @param point
-     * @param wall
-     * @param negativeBound
-     * @param positiveBound
-     * @return
+     * @param point a given point
+     * @param wall The direction of the wall
+     * @param negativeBound the position of the wall in case velocity is negative
+     * @param positiveBound the position of the wall in case velocity is positive
+     * @return the time to reach the wall
      */
     public static Double timeToHitWall(final Point point, final Wall wall,
                                        final double negativeBound, final double positiveBound) {
@@ -90,12 +84,50 @@ public abstract class GeometricEquations {
         return (positiveBound - point.radio() - r) / v;
     }
 
-    public static Point movePoint(final Point point, final double time) {
+    public static Double timeToHitMiddleWall(final Point point, final double xPosition, final double wallHeight, final double opening) {
+        double tc, newY, openingUpperLimit, openingLowerLimit;
+        final double v = point.vx();
+        final double r = point.x();
+
+        if(v == 0) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        // Check that if particle is travelling left, it's currently positioned to the right of the wall. (Same if its going left)
+        if(v < 0) {
+            if( (r-point.radio()) > xPosition){ // r+radio is used to make sure the particle isn't in contact with the wall
+                tc = (xPosition + point.radio() - r) / v;
+            } else{
+                return Double.POSITIVE_INFINITY;
+            }
+        } else{
+            if( (r+point.radio()) < xPosition){
+                tc = (xPosition - point.radio() - r) / v;
+            } else{
+                return Double.POSITIVE_INFINITY;
+            }
+        }
+
+        // If the particle is travelling towards the opening, then there's no collision, and Infinity is returned
+        newY = point.y() + point.vy() * tc;
+        openingUpperLimit = (wallHeight/2) + opening/2;
+        openingLowerLimit = (wallHeight/2) - opening/2;
+
+        if(newY > openingLowerLimit && newY < openingUpperLimit){
+            tc = Double.POSITIVE_INFINITY;
+        }
+
+        return tc;
+    }
+
+        public static Point movePoint(final Point point, final double time) {
         final double newX = point.x() + point.vx() * time;
         final double newY = point.y() + point.vy() * time;
 
         return point.withX(newX).withY(newY);
     }
+
+
 
 
 }

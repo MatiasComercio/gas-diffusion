@@ -32,7 +32,7 @@ class GasDiffusion {
         final List<Event> minEvent;
 
         fraction = 0;
-        collisionTime = 0; //TODO: This should not be reset
+        collisionTime = 0;
 
         minEvent = predictCollisions(points);
 
@@ -72,7 +72,7 @@ class GasDiffusion {
      */
     private List<Event> predictCollisions(final List<Point> points) {
         List<Event> eventList = new ArrayList<>();
-        Event minEvent = null, hWallEvent, vWallEvent;
+        Event minEvent, hWallEvent, vWallEvent, middleWallEvent;
         double tc;
 
         for(int i = 0; i < points.size(); i++) {
@@ -107,6 +107,14 @@ class GasDiffusion {
                 minEvent = vWallEvent;
             }
 
+            // Calculate the collision between the given point and the middle wall
+            tc = GeometricEquations.timeToHitMiddleWall(point, W/2, L, opening);
+            middleWallEvent = new WallEvent(tc, point, Wall.VERTICAL);
+
+            if(middleWallEvent.getTime() < minEvent.getTime()) {
+                minEvent = middleWallEvent;
+            }
+
             // In case the collision happens at the same time than the current events on the list, the event is added.
             // In case this events happens before, the list is replaced for a new one with lower collision time.
             if(eventList.isEmpty() ||  minEvent.compareTo(eventList.get(0)) == 0){
@@ -117,8 +125,6 @@ class GasDiffusion {
             }
 
         }
-
-        //TODO: Check collisions with wall in the middle
 
         //TODO: Calculate Temperature and Pressure
 
