@@ -163,7 +163,8 @@ public class Main {
       currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
 
       if (currentTime >= dt2) {
-        currentTime = 0.0; // reset time counter // TODO: For me it should be currentTime -= dt2;
+        //currentTime = 0.0; // reset time counter // TODO: For me it should be currentTime -= dt2;
+        currentTime -= dt2;
         generateOutputDatFile(points, i); // save to file the current configuration
       }
       fraction = gasDiffusion.getFraction();

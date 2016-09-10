@@ -27,19 +27,23 @@ public class PointFactory {
                                    final int maxTries,
                                    final double speed,
                                    final double mass) {
-        final double minX, minY, maxX, maxY;
+        final double minX, minY, maxX, maxY, maxRadio;
+        final double emptyBorder = 1.25; // Leaves a blank space around all borders, just to make sure no particles collide with walls.
+
+        maxRadio = Arrays.stream(radios).max().getAsDouble();
+
         if (leftBottomPoint != null) {
-            minX = leftBottomPoint.x();
-            minY = leftBottomPoint.y();
+            minX = leftBottomPoint.x() + emptyBorder * maxRadio;
+            minY = leftBottomPoint.y() + emptyBorder * maxRadio;
         } else {
-            minX = minY = Double.MIN_VALUE;
+            minX = minY = Double.MIN_VALUE + emptyBorder * maxRadio;
         }
 
         if (rightTopPoint != null) {
-            maxX = rightTopPoint.x();
-            maxY = rightTopPoint.y();
+            maxX = rightTopPoint.x() - emptyBorder * maxRadio;
+            maxY = rightTopPoint.y() - emptyBorder * maxRadio;
         } else {
-            maxX = maxY = Double.MAX_VALUE;
+            maxX = maxY = Double.MAX_VALUE - emptyBorder * maxRadio;
         }
 
         final int amount = radios.length;
@@ -77,6 +81,7 @@ public class PointFactory {
 
         return generatedPoints;
     }
+
 
     /**
      * Generates in a pseudo-aleatory manner, but based on the given parameters,
@@ -137,7 +142,7 @@ public class PointFactory {
         }
 
         for (Point each : generatedPoints) {
-            if (GeometricEquations.distanceBetween(each, p) < 0) {
+            if (GeometricEquations.distanceBetween(each, p) <= 0) {
                 return false;
             }
         }

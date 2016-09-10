@@ -48,13 +48,16 @@ public abstract class GeometricEquations {
          */
         final double σ = p1.radio() + p2.radio();
 
-        final double d = pow(vr, 2) - pow(vv, 2) * (pow(rr, 2) - pow(σ,2));
+        //final double d = pow(vr, 2) - pow(vv, 2) * (pow(rr, 2) - pow(σ,2));
+        final double d = pow(vr, 2) - vv * (rr - pow(σ,2));
 
         if(d < 0) {
             return Double.POSITIVE_INFINITY;
         }
 
-        return -1 * (vr + sqrt(d)) / (vv);
+        double time = -1 * (vr + sqrt(d)) / (vv);
+
+        return time;
     }
 
     /**
