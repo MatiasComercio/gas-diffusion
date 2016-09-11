@@ -185,10 +185,11 @@ public class Main {
         }
         generateOutputDatFile(systemData, i, i*dt2); // save to file the current configuration
         i++;
+        systemData.resetCurrentPressure(); // reset pressure for the new iteration
       }
     } while (systemData.getLeftSideFraction() > 0.5);
 
-    generateOutputDatFile(i, i*dt2, staticData);
+    generateOutputDatFile(i, i*dt2, staticData, systemData);
 
     long timeAfterEquilibrium = 0;
     do {
@@ -210,6 +211,7 @@ public class Main {
         }
         generateOutputDatFile(systemData, i, i*dt2); // save to file the current configuration
         i++;
+        systemData.resetCurrentPressure(); // reset pressure for the new iteration
         timeAfterEquilibrium ++;
       }
     } while (timeAfterEquilibrium < MAX_TIME_AFTER_EQUILIBRIUM);
@@ -236,6 +238,7 @@ public class Main {
     sb      .append(iteration).append(',')
             .append(realTime).append(',')
             .append(systemData.getLeftSideFraction()).append(',')
+            .append(systemData.getCurrentPressure()).append(',')
             .append(data[KINETIC_ENERGY_INDEX]).append('\n');
 
     BufferedWriter writer = null;
@@ -270,13 +273,20 @@ public class Main {
 
   private static void generateOutputDatFile(final int i,
                                             final double realTime,
-                                            final StaticData staticData) {
+                                            final StaticData staticData,
+                                            final GasDiffusion.SystemData systemData) {
     final Path pathToCsvFile = Paths.get(DESTINATION_FOLDER, TIME_TO_EQUILIBRIUM_FILE);
 
     /* delete previous timeToEquilibrium.dat file, if any */
     if(!deleteIfExists(pathToCsvFile)) {
       return;
     }
+
+    double meanPressure = 0;
+    if (systemData != null && i > 0) {
+      meanPressure = systemData.getTotalPressure()/i;
+    }
+    final double temperature = 1/2.0d * staticData.mass * Math.pow(staticData.speed,2);
 
     final StringBuilder sb = new StringBuilder();
 
@@ -288,6 +298,8 @@ public class Main {
             .append("speed,").append(staticData.speed).append(lineSeparator)
             .append("iteration,").append(i).append(lineSeparator)
             .append("Real Time (in seconds),").append(realTime).append(lineSeparator)
+            .append("Pressure,").append(meanPressure).append(lineSeparator)
+            .append("Temperature,").append(temperature).append(lineSeparator)
             ;
 
     BufferedWriter writer = null;

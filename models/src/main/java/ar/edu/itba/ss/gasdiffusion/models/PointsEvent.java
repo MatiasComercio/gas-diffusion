@@ -33,4 +33,9 @@ public class PointsEvent extends Event {
 
         return newPoints;
     }
+
+    @Override
+    public double getPressure() {
+        return 0; // no pressure at a particle's collision
+    }
 }

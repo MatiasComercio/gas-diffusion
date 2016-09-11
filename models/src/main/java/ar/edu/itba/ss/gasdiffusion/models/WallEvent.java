@@ -25,4 +25,12 @@ public class WallEvent extends Event {
 
         return points;
     }
+
+    @Override
+    public double getPressure() {
+      if (wall.getLength() > 0) {
+        return 2*point.mass()*point.speed()/wall.getLength();
+      }
+      return -1;
+    }
 }

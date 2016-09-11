@@ -22,8 +22,4 @@ public enum Wall {
     public void increasePressure(final double pressure) {
         this.pressure += pressure;
     }
-
-    public double getPressure() {
-        return pressure;
-    }
 }

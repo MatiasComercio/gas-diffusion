@@ -17,6 +17,16 @@ class GasDiffusion {
     systemData = new SystemData(L, W, opening);
   }
 
+  /**
+   * <p>
+   *  Runs the next event on the system that is determined by the next collision, and updates all system's
+   *  particles and data. These information is returned on the SystemData structure.
+   * <p>
+   *  Consider that the SystemData structure is part of this class,
+   *  and can only be accessed when executing the run method
+   * @param points the points over to which run the current iteration
+   * @return the SystemData structure
+   */
   SystemData run(final List<Point> points) {
     final List<Event> minEvent;
   /*
@@ -55,13 +65,14 @@ class GasDiffusion {
 
     Set<Point> collisionParticles;
     for(Event event : minEvent){
-
       collisionParticles = event.execute();
-
 
       // Remove the particles that take part in an event, and add them again with updated velocity and position
       systemData.particles.removeAll(collisionParticles);
       systemData.particles.addAll(collisionParticles);
+
+      // Get the event's resulting currentPressure
+      systemData.currentPressure += event.getPressure();
     }
 
     final long N = points.size();
@@ -133,12 +144,8 @@ class GasDiffusion {
 
     }
 
-    //TODO: Calculate Temperature and Pressure
-
     return eventList;
   }
-
-
 
   /* package-private */ static class SystemData {
     // static system data
@@ -149,6 +156,8 @@ class GasDiffusion {
     // dynamic system data
     private double leftSideFraction;
     private double collisionTime;
+    private double currentPressure;
+    private double totalPressure;
     private List<Point> particles;
 
     private SystemData(final double L, final double W, final double opening) {
@@ -157,6 +166,8 @@ class GasDiffusion {
       this.opening = opening;
       this.leftSideFraction = 1.0d;
       this.collisionTime = 0;
+      this.currentPressure = 0;
+      this.totalPressure = 0;
       resetParticles(0);
     }
 
@@ -168,6 +179,11 @@ class GasDiffusion {
     private List<Point> resetParticles(final int N) {
       particles = new ArrayList<>(N);
       return particles;
+    }
+
+    /* package-private */ void resetCurrentPressure() {
+      this.totalPressure += this.getCurrentPressure();
+      this.currentPressure = 0;
     }
 
     // only retrieve dynamic data; static is already known
@@ -184,7 +200,15 @@ class GasDiffusion {
       return collisionTime;
     }
 
-    public List<Point> getParticles() {
+    /* package-private */ double getCurrentPressure() {
+      return currentPressure;
+    }
+
+    /* package-private */ double getTotalPressure() {
+      return totalPressure;
+    }
+
+    /* package-private */ List<Point> getParticles() {
       return particles;
     }
   }

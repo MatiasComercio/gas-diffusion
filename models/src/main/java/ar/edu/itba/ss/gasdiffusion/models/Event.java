@@ -26,4 +26,6 @@ public abstract class Event implements Comparable<Event> {
     }
 
     public abstract Set<Point> execute();
+
+    public abstract double getPressure();
 }
