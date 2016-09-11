@@ -65,6 +65,12 @@ public abstract class PointAbs {
     return Math.sqrt(Math.pow(vx(), 2) + Math.pow(vy(), 2));
   }
 
+  @Value.Derived
+  @Value.Auxiliary
+  public double kineticEnergy() {
+    return 1/2.0d * mass() * Math.pow(speed(), 2);
+  }
+
   @Value.Check
   protected void checkSpeed() {
     if (speed() < 0) {
@@ -86,6 +92,9 @@ public abstract class PointAbs {
             + ", radio=" + radio()
             + ", vx=" + vx()
             + ", vy=" + vy()
+            + ", speed=" + speed()
+            + ", mass=" + mass()
+            + ", kinetic energy=" + kineticEnergy()
             + "}";
   }
 

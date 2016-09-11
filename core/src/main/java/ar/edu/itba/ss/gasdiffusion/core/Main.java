@@ -30,6 +30,8 @@ public class Main {
   private static final String OVITO_FILE = "graphics.xyz";
   private static final String TIME_TO_EQUILIBRIUM_FILE = "time_to_eq.csv";
   private static final long MAX_TIME_AFTER_EQUILIBRIUM = 100;
+  private static final int SYSTEM_PARTICLES_INDEX = 0;
+  private static final int KINETIC_ENERGY_INDEX = 1;
   private static final String HELP_TEXT =
           "Gas Diffusion 2D Simulation Implementation.\n" +
                   "Arguments: \n" +
@@ -151,23 +153,22 @@ public class Main {
       return;
     }
 
+    double fraction = 1.0, currentTime = 0;
+    int i = 0;
+    generateOutputDatFile(points, fraction, i, i * dt2);
+    i++;
+
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
 
     final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-    double fraction = 1.0, currentTime = 0;
-
-    int i = 0;
-
-    generateOutputDatFile(points, fraction, i, i * dt2);
-
-    i++;
-
   // +++xcheck how to resume this into one metho
+    GasDiffusion.SystemData systemData;
     do {
-      points = gasDiffusion.run(points);
+      systemData = gasDiffusion.run(points);
 
+      points = systemData.getParticles();
       if (points.isEmpty()) { // there was no collision indeed => end with a log message
         LOGGER.info("There is no collision at any time with the given parameters.\n" +
                 "Please check that the system is properly set up.");
@@ -176,22 +177,24 @@ public class Main {
         break; // +++xcheck
       }
 
-      currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
+      currentTime += systemData.getCollisionTime(); // Time left to reach dt2
 
-      fraction = gasDiffusion.getLeftSideFraction();
       if (currentTime >= dt2) { // don't save system's status if it's not the time
-        currentTime -= dt2; // adjust time counter to be the gap between the exact dt2 time and the real one
-        generateOutputDatFile(points, fraction, i, i*dt2); // save to file the current configuration
+        while (currentTime >= dt2) { // adjust time counter to be the gap between the exact dt2 time and the real one
+          currentTime -= dt2;
+        }
+        generateOutputDatFile(systemData, i, i*dt2); // save to file the current configuration
         i++;
       }
-    } while (fraction > 0.5);
+    } while (systemData.getLeftSideFraction() > 0.5);
 
     generateOutputDatFile(i, i*dt2, staticData);
 
     long timeAfterEquilibrium = 0;
     do {
-      points = gasDiffusion.run(points);
+      systemData = gasDiffusion.run(points);
 
+      points = systemData.getParticles();
       if (points.isEmpty()) { // there was no collision indeed => end with a log message
         LOGGER.info("There is no collision at any time with the given parameters.\n" +
                 "Please check that the system is properly set up.");
@@ -200,16 +203,69 @@ public class Main {
         break; // +++xcheck
       }
 
-      currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
-
-      fraction = gasDiffusion.getLeftSideFraction();
+      currentTime += systemData.getCollisionTime(); // Time left to reach dt2
       if (currentTime >= dt2) { // don't save system's status if it's not the time
-        currentTime -= dt2; // adjust time counter to be the gap between the exact dt2 time and the real one
-        generateOutputDatFile(points, fraction, i, i*dt2); // save to file the current configuration
+        while (currentTime >= dt2) { // adjust time counter to be the gap between the exact dt2 time and the real one
+          currentTime -= dt2;
+        }
+        generateOutputDatFile(systemData, i, i*dt2); // save to file the current configuration
         i++;
         timeAfterEquilibrium ++;
       }
     } while (timeAfterEquilibrium < MAX_TIME_AFTER_EQUILIBRIUM);
+  }
+
+  /**
+   * Format:  ID X Y Vx Vy R G B
+   * @param systemData Structure containing all the dynamic information of the system on the
+   *                   current iteration
+   * @param iteration the iteration number
+   * @param realTime real time of the simulation (iteration number * dt2)
+   */
+  private static void generateOutputDatFile(final GasDiffusion.SystemData systemData,
+                                            final int iteration,
+                                            final double realTime) {
+    /* delete previous dynamic.dat file, if any */
+    final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
+    final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
+
+    /* write the new output.dat file */
+    final String[] data = pointsToString(systemData.getParticles(), iteration);
+
+    final StringBuilder sb = new StringBuilder();
+    sb      .append(iteration).append(',')
+            .append(realTime).append(',')
+            .append(systemData.getLeftSideFraction()).append(',')
+            .append(data[KINETIC_ENERGY_INDEX]).append('\n');
+
+    BufferedWriter writer = null;
+    BufferedWriter va_writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
+      writer.write(data[SYSTEM_PARTICLES_INDEX]);
+
+      va_writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile(), true));
+      va_writer.write(sb.toString()); // write data for graphics
+
+    } catch (IOException e) {
+      LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToDatFile, e);
+      System.out.println("[FAIL] - An unexpected error occurred while writing the file '" + pathToDatFile + "'. \n" +
+              "Check the logs for more info.\n" +
+              "Aborting...");
+      exit(UNEXPECTED_ERROR);
+    } finally {
+      try {
+        // close the writer regardless of what happens...
+        if (writer != null) {
+          writer.close();
+        }
+        if (va_writer != null) {
+          va_writer.close();
+        }
+      } catch (Exception ignored) {
+
+      }
+    }
   }
 
   private static void generateOutputDatFile(final int i,
@@ -224,20 +280,20 @@ public class Main {
 
     final StringBuilder sb = new StringBuilder();
 
-    sb      .append("N,").append(staticData.N).append('\n')
-            .append("L,").append(staticData.L).append('\n')
-            .append("W,").append(staticData.W).append('\n')
-            .append("mass,").append(staticData.mass).append('\n')
-            .append("speed,").append(staticData.speed).append('\n')
-            .append("iteration,").append(i).append('\n')
-            .append("Real Time,").append(realTime).append('\n')
+    final String lineSeparator = System.lineSeparator();
+    sb      .append("N,").append(staticData.N).append(lineSeparator)
+            .append("L,").append(staticData.L).append(lineSeparator)
+            .append("W,").append(staticData.W).append(lineSeparator)
+            .append("mass,").append(staticData.mass).append(lineSeparator)
+            .append("speed,").append(staticData.speed).append(lineSeparator)
+            .append("iteration,").append(i).append(lineSeparator)
+            .append("Real Time (in seconds),").append(realTime).append(lineSeparator)
             ;
 
     BufferedWriter writer = null;
     try {
       writer = new BufferedWriter(new FileWriter(pathToCsvFile.toFile(), true));
       writer.write(sb.toString());
-
     } catch (IOException e) {
       LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToCsvFile, e);
       System.out.println("[FAIL] - An unexpected error occurred while writing the file '" + pathToCsvFile + "'. \n" +
@@ -256,12 +312,13 @@ public class Main {
   }
 
   /**
+   * Generates the file for output data, starting with the headers
    * Format:  ID X Y Vx Vy R G B
-   * @param updatedParticles set of particles to be persisted
+   * @param particles set of particles to be persisted
    * @param iteration the iteration number
    * @param realTime real time of the simulation (iteration number * dt2)
    */
-  private static void generateOutputDatFile(final Collection<Point> updatedParticles,
+  private static void generateOutputDatFile(final Collection<Point> particles,
                                             final double fraction,
                                             final long iteration,
                                             final double realTime) {
@@ -270,22 +327,25 @@ public class Main {
     final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     /* write the new output.dat file */
-    final String[] data = pointsToString(updatedParticles, iteration); // +++xcheck: perhaps deprecated array
+    final String[] data = pointsToString(particles, iteration);
 
     final StringBuilder sb = new StringBuilder();
-    sb      .append(iteration).append(',')
-            .append(realTime).append(',')
-            .append(fraction);
+    sb      .append("Iteration,").append("Time (s),").append("Fraction,").append("Pressure,").append("Temperature")
+            .append(System.lineSeparator());
+
+    double pressure = 0;
+
+    sb      .append(iteration).append(',').append(realTime).append(',').append(fraction).append(',')
+            .append(pressure).append(',').append(data[KINETIC_ENERGY_INDEX]).append('\n');
 
     BufferedWriter writer = null;
     BufferedWriter va_writer = null;
     try {
       writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
-      writer.write(data[0]);
+      writer.write(data[SYSTEM_PARTICLES_INDEX]);
 
       va_writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile(), true));
       va_writer.write(sb.toString()); // write data for graphics
-      va_writer.write("\n");
 
     } catch (IOException e) {
       LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToDatFile, e);
@@ -530,23 +590,17 @@ public class Main {
     return sb.toString();
   }
   // Used for building output.dat
-  // +++xtodo: check & update this
   private static String[] pointsToString(final Collection<Point> pointsSet, final long iteration) {
     final StringBuilder sb = new StringBuilder();
     sb.append(iteration).append('\n');
     double vx, vy, r, g, b;
-    double vax = 0;
-    double vay = 0;
-    double v = 0;
+    double kineticEnergy = 0;
     double orientation;
 
     for (final Point point : pointsSet) {
       vx = point.vx();
       vy = point.vy();
       orientation = Math.atan(vy / vx);
-      vax += vx;
-      vay += vy;
-      v += point.speed();
       r = Math.cos(orientation);
       g = Math.sin(orientation);
       b = Math.cos(orientation) * Math.sin(orientation);
@@ -559,21 +613,21 @@ public class Main {
               .append(r).append('\t')
               .append(g).append('\t')
               .append(b).append('\n');
+      kineticEnergy += point.kineticEnergy();
     }
 
     // calculate the current va, assuming the average of all point's speeds (works for the current case)
     // 1/(N * v/N) = 1/v for this case, assuming the above is valid
 
-    final double va;
     if (!pointsSet.isEmpty()) {
-      va = (1/v) * (Math.sqrt(Math.pow(vax,2) + Math.pow(vay,2)));
+      kineticEnergy /= pointsSet.size();
     } else {
-      va = -1;
+      kineticEnergy = 0;
     }
 
     final String[] answer = new String[2];
-    answer[0] = sb.toString();
-    answer[1] = String.valueOf(va);
+    answer[SYSTEM_PARTICLES_INDEX] = sb.toString();
+    answer[KINETIC_ENERGY_INDEX] = String.valueOf(kineticEnergy);
 
     return answer;
   }
