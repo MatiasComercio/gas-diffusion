@@ -2,7 +2,8 @@ package ar.edu.itba.ss.gasdiffusion.models;
 
 public enum Wall {
     HORIZONTAL,
-    VERTICAL;
+    VERTICAL,
+    MIDDLE_VERTICAL;
 
     private double length;
     private double pressure = 0.0;

@@ -94,15 +94,34 @@ public abstract class GeometricEquations {
             return Double.POSITIVE_INFINITY;
         }
 
-        // +++xfix style: the idea is:
         /*
+          The idea is:
+
           If vx < 0:
             calculate tc ONLY IF particle is on the right side (crash the middle wall from the right)
           If vx > 0
             calculate tc ONLY IF particle is on the left side (crash the middle wall from the left)
           if any of this conditions is match, return Double.POSITIVE_INFINITY to represent that, with the current
           system's conditions, it is not possible that the particle hits a middle wall.
+
+          Supposing we got a non infinite tc, we proceed to check the new y position.
+          Notice that we got the tc that matches the condition where the center of the particle/point is at distance
+          R from the middle wall.
+
+          For simplification purpose, we will consider the particle's MBB (Minimum Bounding Box) instead of the
+          particle itself. This simplification is due to the fact that, if not, we should resolve a quadratic
+          equation with the time as the unknown variable, and the complexity of this is out of our scope.
+          For more information about how to get the exact distance of the particle to a certain figure, check
+          the following link: http://www.learnopengl.com/#!In-Practice/2D-Game/Collisions/Collision-Detection
+
+          OK, back on our argument, we should check if the newY +- the particle's radio will collide with a
+          middle wall or it is able to pass across the opening. And that's exactly what we do.
+          If collision is detected, the tc return is the previously found; if not, tc is set to POSITIVE_INFINITE, as
+          there won't be any collision for this particle with any middle wall.
+
+          With all this in mind, we go on to implement the above's logic.
          */
+
         // Check that if particle is travelling left, it's currently positioned to the right of the wall. (Same if its going left)
         if(v < 0) {
             if( (r-point.radio()) > xPosition){ // r+radio is used to make sure the particle isn't in contact with the wall
@@ -118,19 +137,17 @@ public abstract class GeometricEquations {
             }
         }
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // FIXME: at least add RADIO bounds to determine a margin to touch
-        // FIXME: The below comment is false!!! there is the case where the center of the particle does not touch the
-        // wall, but one of its surrounding points do.
-        // If the particle is travelling towards the opening, then there's no collision, and Infinity is returned
+        // check what happens at the new y position
         newY = point.y() + point.vy() * tc;
         openingUpperLimit = (wallHeight/2) + opening/2;
         openingLowerLimit = (wallHeight/2) - opening/2;
 
-        if(newY > openingLowerLimit && newY < openingUpperLimit){
+        if (     newY-point.radio() > openingLowerLimit
+                && newY+point.radio() < openingUpperLimit){
+            // If the MBB of the particle is travelling towards the opening, then there's no collision,
+            // and Infinity is returned
             tc = Double.POSITIVE_INFINITY;
         }
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         return tc;
     }

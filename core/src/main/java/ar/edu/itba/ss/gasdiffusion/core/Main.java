@@ -160,10 +160,10 @@ public class Main {
 
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
+    Wall.MIDDLE_VERTICAL.setLength((staticData.L - opening)/2.0);
 
     final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-  // +++xcheck how to resume this into one metho
     GasDiffusion.SystemData systemData;
     do {
       systemData = gasDiffusion.run(points);
@@ -174,7 +174,7 @@ public class Main {
                 "Please check that the system is properly set up.");
         System.out.println("There is no collision at any time with the given parameters.\n" +
                 "Please check that the system is properly set up.");
-        break; // +++xcheck
+        exit(BAD_ARGUMENT);
       }
 
       currentTime += systemData.getCollisionTime(); // Time left to reach dt2
@@ -201,7 +201,7 @@ public class Main {
                 "Please check that the system is properly set up.");
         System.out.println("There is no collision at any time with the given parameters.\n" +
                 "Please check that the system is properly set up.");
-        break; // +++xcheck
+        exit(BAD_ARGUMENT);
       }
 
       currentTime += systemData.getCollisionTime(); // Time left to reach dt2
@@ -241,6 +241,10 @@ public class Main {
             .append(systemData.getCurrentPressure()).append(',')
             .append(data[KINETIC_ENERGY_INDEX]).append('\n');
 
+    writeToOutputFiles(data, pathToDatFile, pathToGraphicsFile, sb);
+  }
+
+  private static void writeToOutputFiles(final String[] data, final Path pathToDatFile, final Path pathToGraphicsFile, final StringBuilder sb) {
     BufferedWriter writer = null;
     BufferedWriter va_writer = null;
     try {
@@ -350,34 +354,7 @@ public class Main {
     sb      .append(iteration).append(',').append(realTime).append(',').append(fraction).append(',')
             .append(pressure).append(',').append(data[KINETIC_ENERGY_INDEX]).append('\n');
 
-    BufferedWriter writer = null;
-    BufferedWriter va_writer = null;
-    try {
-      writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
-      writer.write(data[SYSTEM_PARTICLES_INDEX]);
-
-      va_writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile(), true));
-      va_writer.write(sb.toString()); // write data for graphics
-
-    } catch (IOException e) {
-      LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToDatFile, e);
-      System.out.println("[FAIL] - An unexpected error occurred while writing the file '" + pathToDatFile + "'. \n" +
-              "Check the logs for more info.\n" +
-              "Aborting...");
-      exit(UNEXPECTED_ERROR);
-    } finally {
-      try {
-        // close the writer regardless of what happens...
-        if (writer != null) {
-          writer.close();
-        }
-        if (va_writer != null) {
-          va_writer.close();
-        }
-      } catch (Exception ignored) {
-
-      }
-    }
+    writeToOutputFiles(data, pathToDatFile, pathToGraphicsFile, sb);
   }
 
   private static void generateCase(final String[] args) {
@@ -644,7 +621,9 @@ public class Main {
               // R G B colors
               .append(r).append('\t')
               .append(g).append('\t')
-              .append(b).append('\n');
+              .append(b).append('\t')
+              // radio
+              .append(point.radio()).append('\n');
       kineticEnergy += point.kineticEnergy();
     }
 
@@ -744,7 +723,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
               .append('\n');
 
       sb      // id
@@ -756,7 +737,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
               .append('\n');
 
       sb      // id
@@ -768,7 +751,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
               .append('\n');
 
       sb      // id
@@ -780,7 +765,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
               .append('\n');
 
       final int middleDownBar = N+5, middleUpBar = N+6;
@@ -793,7 +780,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
               .append('\n');
 
       sb      // id
@@ -805,7 +794,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
               .append('\n');
 
       sb      // id
@@ -817,7 +808,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
               .append('\n');
 
 
@@ -830,7 +823,9 @@ public class Main {
               // velocity
               .append(0).append('\t').append(0).append('\t')
               // color: black [ r, g, b ]
-              .append(0).append('\t').append(0).append('\t').append(0)
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
               .append('\n');
 
 

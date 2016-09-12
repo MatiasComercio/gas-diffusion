@@ -17,7 +17,7 @@ public class WallEvent extends Event {
     public Set<Point> execute() {
         final Set<Point> points = new HashSet<>();
 
-        if(wall == Wall.VERTICAL) {
+        if(wall == Wall.VERTICAL || wall == Wall.MIDDLE_VERTICAL) {
             points.add(point.updatePoint(time, -1 * point.vx(), point.vy()));
         } else if (wall == Wall.HORIZONTAL) {
             points.add(point.updatePoint(time, point.vx(), -1 * point.vy()));

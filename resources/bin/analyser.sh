@@ -161,13 +161,13 @@ fi
 # create results folder
 mkdir -p ${RESULTS_FOLDER}
 
-N_ARRAY=(50 100 200)
+N_ARRAY=(50 75 100)
 N_ARRAY_LENGTH=${#N_ARRAY[*]}
 
-OP_ARRAY=(0.004 0.006 0.01)
+OP_ARRAY=(0.006 0.008 0.01)
 OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
 
-V_ARRAY=(0.01 0.05 0.1)
+V_ARRAY=(0.01 0.025 0.05 0.075 0.1)
 V_ARRAY_LENGTH=${#V_ARRAY[*]}
 
 ############################################################
@@ -175,10 +175,10 @@ V_ARRAY_LENGTH=${#V_ARRAY[*]}
 ############################################################
 # Test example
 
-N_ARRAY=(50 75)
+N_ARRAY=(50) # 75)
 N_ARRAY_LENGTH=${#N_ARRAY[*]}
 
-OP_ARRAY=(0.006 0.01)
+OP_ARRAY=( 0.01 ) # 0.006 0.01)
 OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
 
 V_ARRAY=(0.01 0.05)
@@ -192,7 +192,7 @@ C_ITERATIONS=2
 # I stands for index
 I_MEAN=0
 I_SD=1
-I_TEMPERATURE
+I_TEMPERATURE=2
 
 # declare Associative arrays (like hashmaps): http://wiki.bash-hackers.org/syntax/arrays
 declare -A PRESSURE_ARRAY
