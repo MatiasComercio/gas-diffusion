@@ -186,7 +186,17 @@ class GasDiffusion {
       this.currentPressure = 0;
     }
 
-    // only retrieve dynamic data; static is already known
+    public double getL() {
+      return L;
+    }
+
+    public double getW() {
+      return W;
+    }
+
+    public double getOpening() {
+      return opening;
+    }
 
     /**
      *

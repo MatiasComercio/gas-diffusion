@@ -18,6 +18,10 @@ public abstract class PointAbs {
     return idGen ++;
   }
 
+  @Value.Default
+  @Value.Auxiliary
+  public boolean isColliding() { return false; }
+
   @Builder.Parameter
   @Value.Auxiliary
   public abstract double x();
@@ -111,6 +115,9 @@ public abstract class PointAbs {
             .build();
   }
 
+  /**
+   * Assumes that the point is COLLIDING
+   */
   public Point updatePoint(final double time, final double newVx, final double newVy) {
     final double newX = x() + vx() * time;
     final double newY = y() + vy() * time;
@@ -121,6 +128,7 @@ public abstract class PointAbs {
             .vy(newVy)
             .mass(this.mass())
             .radio(this.radio())
+            .isColliding(true)
             .build();
   }
 

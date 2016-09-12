@@ -45,7 +45,7 @@ public class Main {
                   "\t Particles will also have an orientation between 0 and 2*PI\n" +
                   "* gas <path/to/static.dat> <path/to/dynamic.dat> <dt2> <opening>\n" +
                   "\t runs the gas-diffusion simulation and saves a snapshot of the system every dt2 time in <output.dat>.\n" +
-                  "* gen ovito <path/to/static.dat> <path/to/output.dat> : \n"+
+                  "* gen ovito <path/to/static.dat> <path/to/output.dat> <opening> : \n"+
                   "\t generates an output/graphics.xyz file (for Ovito) with the result of the gas diffusion\n " +
                   "\t automaton(<output.dat>) generated with the other two files.\n";
 
@@ -155,7 +155,7 @@ public class Main {
 
     double fraction = 1.0, currentTime = 0;
     int i = 0;
-    generateOutputDatFile(points, fraction, i, i * dt2);
+    generateOutputDatFile(staticData.W, points, fraction, i, i * dt2);
     i++;
 
     Wall.HORIZONTAL.setLength(staticData.W);
@@ -232,7 +232,7 @@ public class Main {
     final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     /* write the new output.dat file */
-    final String[] data = pointsToString(systemData.getParticles(), iteration);
+    final String[] data = pointsToString(systemData.getW(), systemData.getParticles(), iteration);
 
     final StringBuilder sb = new StringBuilder();
     sb      .append(iteration).append(',')
@@ -330,7 +330,7 @@ public class Main {
    * @param iteration the iteration number
    * @param realTime real time of the simulation (iteration number * dt2)
    */
-  private static void generateOutputDatFile(final Collection<Point> particles,
+  private static void generateOutputDatFile(final double W, final Collection<Point> particles,
                                             final double fraction,
                                             final long iteration,
                                             final double realTime) {
@@ -339,7 +339,7 @@ public class Main {
     final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     /* write the new output.dat file */
-    final String[] data = pointsToString(particles, iteration);
+    final String[] data = pointsToString(W, particles, iteration);
 
     final StringBuilder sb = new StringBuilder();
     sb      .append("Iteration,").append("Time (s),").append("Fraction,").append("Pressure,").append("Temperature")
@@ -467,15 +467,23 @@ public class Main {
 
       case "ovito":
         // get particle id
-        if (args.length != 4) {
+        if (args.length != 5) {
           System.out.println("[FAIL] - Bad number of arguments. Try 'help' for more information.");
           exit(BAD_N_ARGUMENTS);
         }
 
         final String staticFile = args[2];
         final String outputFile = args[3];
+        double opening = 0;
+        try {
+          opening = Double.parseDouble(args[4]);
+        } catch (NumberFormatException e) {
+          LOGGER.warn("[FAIL] - <L> must be a number. Caused by: ", e);
+          System.out.println("[FAIL] - <L> argument must be a number. Try 'help' for more information.");
+          exit(BAD_ARGUMENT);
+        }
 
-        generateOvitoFile(staticFile, outputFile);
+        generateOvitoFile(staticFile, outputFile, opening);
         break;
 
       default:
@@ -602,21 +610,33 @@ public class Main {
     return sb.toString();
   }
   // Used for building output.dat
-  private static String[] pointsToString(final Collection<Point> pointsSet, final long iteration) {
+  private static String[] pointsToString(final double W, final Collection<Point> pointsSet, final long iteration) {
     final StringBuilder sb = new StringBuilder();
     sb.append(iteration).append('\n');
     double vx, vy, r, g, b;
     double kineticEnergy = 0;
-    double orientation;
 
     for (final Point point : pointsSet) {
       vx = point.vx();
       vy = point.vy();
-      orientation = Math.atan(vy / vx);
-      r = Math.cos(orientation);
-      g = Math.sin(orientation);
-      b = Math.cos(orientation) * Math.sin(orientation);
-      sb.append(point.id()).append('\t')
+
+      if (point.isColliding()) {
+        r = 1;
+        g = 0;
+        b = 0;
+      } else if (point.x() < W/2 ) { // left side
+        r = 0;
+        g = 1;
+        b = 0;
+      } else {
+        r = 0;
+        g = 0;
+        b = 1;
+      }
+
+      sb      .append(point.id()).append('\t')
+              // type
+              .append(point.id()).append('\t')
               // position
               .append(point.x()).append('\t').append(point.y()).append('\t')
               // velocity
@@ -658,7 +678,7 @@ public class Main {
    * @param staticFile -
    * @param outputFile -
    */
-  private static void generateOvitoFile(final String staticFile, final String outputFile) {
+  private static void generateOvitoFile(final String staticFile, final String outputFile, final double opening) {
     final Path pathToStaticDatFile = Paths.get(staticFile);
     final Path pathToOutputDatFile = Paths.get(outputFile);
     final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, OVITO_FILE);
@@ -713,45 +733,113 @@ public class Main {
       //W = Double.valueOf(staticDatIterator.next());
       L = staticData.L;
       W = staticData.W;
-
       // Create virtual particles in the borders, in order for Ovito to show the whole board
-      sb.append(N+1).append('\t').append(0).append('\t').append(0).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+2).append('\t').append(0).append('\t').append(L).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+3).append('\t').append(W).append('\t').append(0).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+4).append('\t').append(W).append('\t').append(L).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+5).append('\t').append(W/2).append('\t').append(0).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+6).append('\t').append(W/2).append('\t').append(L).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
+
+      sb      // id
+              .append(N+1).append('\t')
+              // type
+              .append(N+1).append('\t')
+              // position
+              .append(0).append('\t').append(0).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
               .append(0).append('\t').append(0).append('\t').append(0)
               .append('\n');
 
-      stringN = String.valueOf(N+6);
+      sb      // id
+              .append(N+2).append('\t')
+              // type
+              .append(N+2).append('\t')
+              // position
+              .append(W).append('\t').append(0).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+      sb      // id
+              .append(N+3).append('\t')
+              // type
+              .append(N+3).append('\t')
+              // position
+              .append(W).append('\t').append(L).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+      sb      // id
+              .append(N+4).append('\t')
+              // type
+              .append(N+4).append('\t')
+              // position
+              .append(0).append('\t').append(L).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+      final int middleDownBar = N+5, middleUpBar = N+6;
+      sb      // id
+              .append(N+5).append('\t')
+              // type
+              .append(middleDownBar).append('\t')
+              // position
+              .append(W/2).append('\t').append(0).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+      sb      // id
+              .append(N+6).append('\t')
+              // type
+              .append(middleDownBar).append('\t')
+              // position
+              .append(W/2).append('\t').append((L-opening)/2).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+      sb      // id
+              .append(N+7).append('\t')
+              // type
+              .append(middleUpBar).append('\t')
+              // position
+              .append(W/2).append('\t').append((L+opening)/2).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+
+      sb      // id
+              .append(N+8).append('\t')
+              // type
+              .append(middleUpBar).append('\t')
+              // position
+              .append(W/2).append('\t').append(L).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0)
+              .append('\n');
+
+
+      stringN = String.valueOf(N+8);
 
       borderParticles = sb.toString();
 
       while(outputDatIterator.hasNext()){
-        // Write ammount of particles (N)
+        // Write amount of particles (N)
         writer.write(stringN);
         writer.newLine();
 

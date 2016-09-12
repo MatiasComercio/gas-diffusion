@@ -94,7 +94,7 @@ ${JAR} gas ${STATIC_PATH} ${DYNAMIC_PATH} ${dt2} ${opening}
 #    generates an output/graphics.xyz file (for Ovito) with the result of the gas diffusion
 #     automaton(<output.dat>) generated with the other two files.
 echo -e "Generating graphics.xyz... "
-${JAR} gen ovito ${STATIC_PATH} ${SIM_OUTPUT_PATH}
+${JAR} gen ovito ${STATIC_PATH} ${SIM_OUTPUT_PATH} ${opening}
 
 END_TIME=$(date +%s)
 
