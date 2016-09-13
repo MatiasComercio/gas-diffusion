@@ -150,7 +150,7 @@ elif [ $# -eq 0 ]; then
   r=0.0015
   L=0.09
   W=0.24
-  dt2=0.5
+  dt2=0.1
   C_ITERATIONS=50
 else
   echo "[FAIL] - This script requires 0 or $PARAMS_REQUIRED parameters - <m> <v> <r> <L> <W> <dt2> <cIterations>"
@@ -161,13 +161,13 @@ fi
 # create results folder
 mkdir -p ${RESULTS_FOLDER}
 
-N_ARRAY=(50 75 100)
+N_ARRAY=(50 75)
 N_ARRAY_LENGTH=${#N_ARRAY[*]}
 
-OP_ARRAY=(0.006 0.008 0.01)
+OP_ARRAY=(0.006 0.008 0.01 0.03)
 OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
 
-V_ARRAY=(0.01 0.025 0.05 0.075 0.1)
+V_ARRAY=(0.01)
 V_ARRAY_LENGTH=${#V_ARRAY[*]}
 
 ############################################################
@@ -175,17 +175,17 @@ V_ARRAY_LENGTH=${#V_ARRAY[*]}
 ############################################################
 # Test example
 
-N_ARRAY=(50) # 75)
-N_ARRAY_LENGTH=${#N_ARRAY[*]}
-
-OP_ARRAY=( 0.01 ) # 0.006 0.01)
-OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
-
-V_ARRAY=(0.01 0.05)
-V_ARRAY_LENGTH=${#V_ARRAY[*]}
-
-dt2=0.01
-C_ITERATIONS=10
+# N_ARRAY=(50) # 75)
+# N_ARRAY_LENGTH=${#N_ARRAY[*]}
+#
+# OP_ARRAY=( 0.01 ) # 0.006 0.01)
+# OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
+#
+# V_ARRAY=(0.01 0.05)
+# V_ARRAY_LENGTH=${#V_ARRAY[*]}
+#
+# dt2=0.01
+# C_ITERATIONS=2
 
 ############################################################
 ############################################################
@@ -279,14 +279,14 @@ for (( a = 0; a < ${V_ARRAY_LENGTH}; a++ )); do
 
         # Get the value of the number of itereations to reach the equilibrium
         # This is on the 6th row, 2nd column of the time_to_eq.csv file
-        IT_TO_EQ=`sed '6q;d' ${SIM_TIME_TO_EQ_PATH} | awk -F "\"*,\"*" '{print $2}'`
+        IT_TO_EQ=`sed '7q;d' ${SIM_TIME_TO_EQ_PATH} | awk -F "\"*,\"*" '{print $2}'`
         IT_TO_EQ_MEAN=$(awk -v mean=${IT_TO_EQ_MEAN} -v curr=${IT_TO_EQ} \
                       'BEGIN {printf "%.6f\n", mean + curr}')
         IT_TO_EQ_SD=$(awk -v a=${IT_TO_EQ_SD} -v b=${IT_TO_EQ} 'BEGIN {printf "%.6f\n", a+b^2}')
 
-        if [ ${IT_TO_EQ} -le ${MIN_ITERATIONS:=${IT_TO_EQ}} ]; then
-          MIN_ITERATIONS=${IT_TO_EQ}
-        fi
+        # if [ ${IT_TO_EQ} -le ${MIN_ITERATIONS:=${IT_TO_EQ}} ]; then
+        #   MIN_ITERATIONS=${IT_TO_EQ}
+        # fi
 
         PRESSURE=`sed '8q;d' ${SIM_TIME_TO_EQ_PATH} | awk -F "\"*,\"*" '{print $2}'`
         PRESSURE_ARRAY["$i, $j, $a, $I_MEAN"]=$(awk -v mean=${PRESSURE_ARRAY["$i, $j, $a, $I_MEAN"]} -v curr=${PRESSURE} \
@@ -314,15 +314,15 @@ for (( a = 0; a < ${V_ARRAY_LENGTH}; a++ )); do
 
       echo -en "    Generating i_t_fp_N${N}_OP${OP} results file... "
 
-      for (( l = 0; l < ${#FPs_MEAN[@]}; l++ )); do
-        ITERATION["$l"]=${l}
-        TIME["$l"]=$(awk -v a=${l} -v b=${dt2} 'BEGIN {printf "%.6f\n", a*b}')
-        # FPs_MEAN["$l"]=$(awk -v a=${FPs_MEAN["$l"]:=0} -v b=${C_ITERATIONS} 'BEGIN {printf "%.6f\n", a/b}')
-        # # Done this way so as to avoid -nan due to negative number caused by decimal precision
-        # FIRST=$(awk -v a=${FPs_SD["$l"]:=0} -v b=${C_ITERATIONS} 'BEGIN {printf "%.6f\n", a/b}')
-        # SECOND=$(awk -v c=${FPs_MEAN["$l"]} 'BEGIN {printf "%.6f\n", c^2}')
-        # FPs_SD["$l"]=$(awk -v a=${FIRST} -v b=${SECOND} 'BEGIN {printf "%.6f\n", sqrt(a-b)}')
-      done
+      # for (( l = 0; l < ${#FPs_MEAN[@]}; l++ )); do
+      #   ITERATION["$l"]=${l}
+      #   TIME["$l"]=$(awk -v a=${l} -v b=${dt2} 'BEGIN {printf "%.6f\n", a*b}')
+      #   # FPs_MEAN["$l"]=$(awk -v a=${FPs_MEAN["$l"]:=0} -v b=${C_ITERATIONS} 'BEGIN {printf "%.6f\n", a/b}')
+      #   # # Done this way so as to avoid -nan due to negative number caused by decimal precision
+      #   # FIRST=$(awk -v a=${FPs_SD["$l"]:=0} -v b=${C_ITERATIONS} 'BEGIN {printf "%.6f\n", a/b}')
+      #   # SECOND=$(awk -v c=${FPs_MEAN["$l"]} 'BEGIN {printf "%.6f\n", c^2}')
+      #   # FPs_SD["$l"]=$(awk -v a=${FIRST} -v b=${SECOND} 'BEGIN {printf "%.6f\n", sqrt(a-b)}')
+      # done
 
       IT_TO_EQ_MEAN=$(awk -v a=${IT_TO_EQ_MEAN} -v b=${C_ITERATIONS} 'BEGIN {printf "%.6f\n", a/b}')
       FIRST=$(awk -v a=${IT_TO_EQ_SD} -v b=${C_ITERATIONS} 'BEGIN {printf "%.6f\n", a/b}')
@@ -336,23 +336,10 @@ for (( a = 0; a < ${V_ARRAY_LENGTH}; a++ )); do
 
       OUTPUT_TABLE_PATH=`gen_i_t_fp`
 
-      echo -e "E(iterations), SD(iterations), MIN(iterations)\r" >> ${OUTPUT_TABLE_PATH}
+      echo -e "E(Time(s)), SD(Time(s))\r" >> ${OUTPUT_TABLE_PATH}
       paste -d ',' <(printf "%s\n" "${IT_TO_EQ_MEAN}") <(printf "%s\n" "${IT_TO_EQ_SD}") \
-                   <(printf "%s\n" "${MIN_ITERATIONS}") >> ${OUTPUT_TABLE_PATH}
-
-      echo -e "E(Pressure), SD(Pressure), Temperature\r" >> ${OUTPUT_TABLE_PATH}
-      paste -d ','  <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_MEAN"]}") \
-                    <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_SD"]}") \
-                    <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_TEMPERATURE"]}") \
-                    >> ${OUTPUT_TABLE_PATH}
-
-      # Add identifiers of columns to the start of the file
-      echo -e "iteration, time(s), E(fp) = |fp| = mean(fp), SD(fp) = sqrt(|fp^2|-|fp|^2)\r" >> ${OUTPUT_TABLE_PATH}
-
-      # Append the columns to the previously generated file with the headers
-      paste -d ','  <(printf "%s\n" "${ITERATION[@]}") <(printf "%s\n" "${TIME[@]}") \
-                    <(printf "%s\n" "${FPs_MEAN[@]}") <(printf "%s\n" "${FPs_SD[@]}") \
-                    >> ${OUTPUT_TABLE_PATH}
+                  >> ${OUTPUT_TABLE_PATH}
+                  #  <(printf "%s\n" "${MIN_ITERATIONS}")
 
       echo -en "    [DONE]\n"
     done
@@ -365,23 +352,23 @@ for (( a = 0; a < ${V_ARRAY_LENGTH}; a++ )); do
   echo -e "####################################"
 done
 
-# Generate pressure stadistic file
-v="Varying"
-for (( i = 0; i < ${N_ARRAY_LENGTH}; i++ )); do
-  N=${N_ARRAY[$i]}
-  for (( j = 0; j < ${OP_ARRAY_LENGTH}; j++ )); do
-    OP=${OP_ARRAY[$j]}
-    OUTPUT_TABLE_PATH=`gen_pre_t_results` # N & OP fixed; velocity varies
-    for (( a = 0 ; a < ${V_ARRAY_LENGTH} ; a++ )); do
-      v=${V_ARRAY[$a]}
-      paste -d ','  <(printf "%s\n" "${v}") \
-                    <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_TEMPERATURE"]}") \
-                    <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_MEAN"]}") \
-                    <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_SD"]}") \
-                    >> ${OUTPUT_TABLE_PATH}
-    done
-  done
-done
+# # Generate pressure stadistic file
+# v="Varying"
+# for (( i = 0; i < ${N_ARRAY_LENGTH}; i++ )); do
+#   N=${N_ARRAY[$i]}
+#   for (( j = 0; j < ${OP_ARRAY_LENGTH}; j++ )); do
+#     OP=${OP_ARRAY[$j]}
+#     OUTPUT_TABLE_PATH=`gen_pre_t_results` # N & OP fixed; velocity varies
+#     for (( a = 0 ; a < ${V_ARRAY_LENGTH} ; a++ )); do
+#       v=${V_ARRAY[$a]}
+#       paste -d ','  <(printf "%s\n" "${v}") \
+#                     <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_TEMPERATURE"]}") \
+#                     <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_MEAN"]}") \
+#                     <(printf "%s\n" "${PRESSURE_ARRAY["$i, $j, $a, $I_SD"]}") \
+#                     >> ${OUTPUT_TABLE_PATH}
+#     done
+#   done
+# done
 
 END_TIME=$(date +%s)
 

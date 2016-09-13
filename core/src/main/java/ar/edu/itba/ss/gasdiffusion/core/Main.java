@@ -153,7 +153,7 @@ public class Main {
       return;
     }
 
-    double fraction = 1.0, currentTime = 0;
+    double fraction = 1.0, currentTime = 0, systemTime = 0, tc;
     int i = 0;
     generateOutputDatFile(staticData.W, points, fraction, i, i * dt2);
     i++;
@@ -177,19 +177,22 @@ public class Main {
         exit(BAD_ARGUMENT);
       }
 
-      currentTime += systemData.getCollisionTime(); // Time left to reach dt2
-
+      tc = systemData.getCollisionTime(); // Time left to reach dt2
+      systemTime += tc;
+      currentTime += tc;
       if (currentTime >= dt2) { // don't save system's status if it's not the time
         while (currentTime >= dt2) { // adjust time counter to be the gap between the exact dt2 time and the real one
           currentTime -= dt2;
         }
-        generateOutputDatFile(systemData, i, i*dt2); // save to file the current configuration
+        generateOutputDatFile(systemData, i, systemTime); // save to file the current configuration
         i++;
         systemData.resetCurrentPressure(); // reset pressure for the new iteration
       }
     } while (systemData.getLeftSideFraction() > 0.5);
 
-    generateOutputDatFile(i, i*dt2, staticData, systemData);
+    final int eqIteration = i;
+    final double eqSystemTime = systemTime;
+    systemData.resetTotalPressure();
 
     long timeAfterEquilibrium = 0;
     do {
@@ -204,17 +207,22 @@ public class Main {
         exit(BAD_ARGUMENT);
       }
 
-      currentTime += systemData.getCollisionTime(); // Time left to reach dt2
+      tc = systemData.getCollisionTime(); // Time left to reach dt2
+      systemTime += tc;
+      currentTime += tc;
       if (currentTime >= dt2) { // don't save system's status if it's not the time
         while (currentTime >= dt2) { // adjust time counter to be the gap between the exact dt2 time and the real one
           currentTime -= dt2;
         }
-        generateOutputDatFile(systemData, i, i*dt2); // save to file the current configuration
+        generateOutputDatFile(systemData, i, systemTime); // save to file the current configuration
         i++;
         systemData.resetCurrentPressure(); // reset pressure for the new iteration
         timeAfterEquilibrium ++;
       }
     } while (timeAfterEquilibrium < MAX_TIME_AFTER_EQUILIBRIUM);
+
+    // write equilibrium conditions
+    generateOutputDatFile(eqIteration, eqSystemTime, systemTime-eqSystemTime, staticData, systemData);
   }
 
   /**
@@ -276,7 +284,8 @@ public class Main {
   }
 
   private static void generateOutputDatFile(final int i,
-                                            final double realTime,
+                                            final double eqTime,
+                                            final double timeSinceEq,
                                             final StaticData staticData,
                                             final GasDiffusion.SystemData systemData) {
     final Path pathToCsvFile = Paths.get(DESTINATION_FOLDER, TIME_TO_EQUILIBRIUM_FILE);
@@ -287,8 +296,8 @@ public class Main {
     }
 
     double meanPressure = 0;
-    if (systemData != null && i > 0) {
-      meanPressure = systemData.getTotalPressure()/i;
+    if (systemData != null && timeSinceEq > 0) {
+      meanPressure = systemData.getTotalPressure()/timeSinceEq;
     }
     final double temperature = 1/2.0d * staticData.mass * Math.pow(staticData.speed,2);
 
@@ -301,7 +310,7 @@ public class Main {
             .append("mass,").append(staticData.mass).append(lineSeparator)
             .append("speed,").append(staticData.speed).append(lineSeparator)
             .append("iteration,").append(i).append(lineSeparator)
-            .append("Real Time (in seconds),").append(realTime).append(lineSeparator)
+            .append("Real Time (in seconds),").append(eqTime).append(lineSeparator)
             .append("Pressure,").append(meanPressure).append(lineSeparator)
             .append("Temperature,").append(temperature).append(lineSeparator)
             ;

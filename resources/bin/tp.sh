@@ -150,7 +150,7 @@ elif [ $# -eq 0 ]; then
   r=0.0015
   L=0.09
   W=0.24
-  dt2=0.5
+  dt2=0.01
   C_ITERATIONS=50
 else
   echo "[FAIL] - This script requires 0 or $PARAMS_REQUIRED parameters - <m> <v> <r> <L> <W> <dt2> <cIterations>"
@@ -161,10 +161,10 @@ fi
 # create results folder
 mkdir -p ${RESULTS_FOLDER}
 
-N_ARRAY=(50 75 100)
+N_ARRAY=(50)
 N_ARRAY_LENGTH=${#N_ARRAY[*]}
 
-OP_ARRAY=(0.006 0.008 0.01)
+OP_ARRAY=(0.006)
 OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
 
 V_ARRAY=(0.01 0.025 0.05 0.075 0.1)
@@ -175,17 +175,17 @@ V_ARRAY_LENGTH=${#V_ARRAY[*]}
 ############################################################
 # Test example
 
-N_ARRAY=(50) # 75)
-N_ARRAY_LENGTH=${#N_ARRAY[*]}
-
-OP_ARRAY=( 0.01 ) # 0.006 0.01)
-OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
-
-V_ARRAY=(0.01 0.05)
-V_ARRAY_LENGTH=${#V_ARRAY[*]}
-
-dt2=0.01
-C_ITERATIONS=10
+# N_ARRAY=(50) # 75)
+# N_ARRAY_LENGTH=${#N_ARRAY[*]}
+#
+# OP_ARRAY=( 0.01 ) # 0.006 0.01)
+# OP_ARRAY_LENGTH=${#OP_ARRAY[*]}
+#
+# V_ARRAY=(0.01 0.05)
+# V_ARRAY_LENGTH=${#V_ARRAY[*]}
+#
+# dt2=0.01
+# C_ITERATIONS=2
 
 ############################################################
 ############################################################

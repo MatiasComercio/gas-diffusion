@@ -186,16 +186,12 @@ class GasDiffusion {
       this.currentPressure = 0;
     }
 
-    public double getL() {
-      return L;
+    /* package-private */ void resetTotalPressure() {
+      this.totalPressure = 0;
     }
 
-    public double getW() {
+    /* package-private */ double getW() {
       return W;
-    }
-
-    public double getOpening() {
-      return opening;
     }
 
     /**
