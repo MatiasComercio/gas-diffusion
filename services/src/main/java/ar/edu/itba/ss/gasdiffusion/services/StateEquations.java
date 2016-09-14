@@ -34,6 +34,6 @@ public abstract class StateEquations {
     }
 
     public static double pressure(final Point point, final Wall wall, final double tc) {
-        return 2 * point.mass() * point.speed() / (tc * wall.getLength()); //TODO: Check correctly the length of the wall for the cases of the mid walls
+        return 2 * point.mass() * point.speed() / (tc * wall.getLength());
     }
 }

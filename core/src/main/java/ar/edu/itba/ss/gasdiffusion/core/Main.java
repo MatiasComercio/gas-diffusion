@@ -26,8 +26,12 @@ public class Main {
   private static final String STATIC_FILE = "static.dat";
   private static final String DYNAMIC_FILE = "dynamic.dat";
   private static final String OUTPUT_FILE = "output.dat";
-  private static final String VA_FILE = "t_va.csv";
+  private static final String DATA_FOR_GRAPHICS_FILE = "i_t_fp_pre_temp.csv";
   private static final String OVITO_FILE = "graphics.xyz";
+  private static final String TIME_TO_EQUILIBRIUM_FILE = "time_to_eq.csv";
+  private static final long MAX_TIME_AFTER_EQUILIBRIUM = 100;
+  private static final int SYSTEM_PARTICLES_INDEX = 0;
+  private static final int KINETIC_ENERGY_INDEX = 1;
   private static final String HELP_TEXT =
           "Gas Diffusion 2D Simulation Implementation.\n" +
                   "Arguments: \n" +
@@ -41,7 +45,7 @@ public class Main {
                   "\t Particles will also have an orientation between 0 and 2*PI\n" +
                   "* gas <path/to/static.dat> <path/to/dynamic.dat> <dt2> <opening>\n" +
                   "\t runs the gas-diffusion simulation and saves a snapshot of the system every dt2 time in <output.dat>.\n" +
-                  "* gen ovito <path/to/static.dat> <path/to/output.dat> : \n"+
+                  "* gen ovito <path/to/static.dat> <path/to/output.dat> <opening> : \n"+
                   "\t generates an output/graphics.xyz file (for Ovito) with the result of the gas diffusion\n " +
                   "\t automaton(<output.dat>) generated with the other two files.\n";
 
@@ -140,61 +144,123 @@ public class Main {
 
     /* delete previous dynamic.dat file, if any */
     final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
-    final Path pathToVaFile = Paths.get(DESTINATION_FOLDER, VA_FILE);
+    final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     if(!deleteIfExists(pathToDatFile)) {
       return;
     }
-    if(!deleteIfExists(pathToVaFile)) {
+    if(!deleteIfExists(pathToGraphicsFile)) {
       return;
     }
-    generateOutputDatFile(points, 0);
+
+    double fraction = 1.0, currentTime = 0, systemTime = 0, tc;
+    int i = 0;
+    generateOutputDatFile(staticData.W, points, fraction, i, i * dt2);
+    i++;
 
     Wall.HORIZONTAL.setLength(staticData.W);
     Wall.VERTICAL.setLength(staticData.L);
+    Wall.MIDDLE_VERTICAL.setLength((staticData.L - opening)/2.0);
 
     final GasDiffusion gasDiffusion = new GasDiffusion(staticData.L, staticData.W, opening);
 
-    double fraction = 1.0, currentTime = 0;
-    long maxIterations = 1000;
+    GasDiffusion.SystemData systemData;
+    do {
+      systemData = gasDiffusion.run(points);
 
-    for(long i = 0; i < maxIterations /* && fraction > 0.5 */; i++) { //TODO: Finish by fractionParticles and not by number of iterations
-      points = gasDiffusion.run(points);
-      currentTime += gasDiffusion.getCollisionTime(); // Time left to reach dt2
-
-      if (currentTime >= dt2) {
-        //currentTime = 0.0; // reset time counter // TODO: For me it should be currentTime -= dt2;
-        currentTime -= dt2;
-        generateOutputDatFile(points, i); // save to file the current configuration
+      points = systemData.getParticles();
+      if (points.isEmpty()) { // there was no collision indeed => end with a log message
+        LOGGER.info("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        System.out.println("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        exit(BAD_ARGUMENT);
       }
-      fraction = gasDiffusion.getFraction();
-    }
 
+      tc = systemData.getCollisionTime(); // Time left to reach dt2
+      systemTime += tc;
+      currentTime += tc;
+      if (currentTime >= dt2) { // don't save system's status if it's not the time
+        while (currentTime >= dt2) { // adjust time counter to be the gap between the exact dt2 time and the real one
+          currentTime -= dt2;
+        }
+        generateOutputDatFile(systemData, i, systemTime); // save to file the current configuration
+        i++;
+        systemData.resetCurrentPressure(); // reset pressure for the new iteration
+      }
+    } while (systemData.getLeftSideFraction() > 0.5);
 
+    final int eqIteration = i;
+    final double eqSystemTime = systemTime;
+    systemData.resetTotalPressure();
+
+    long timeAfterEquilibrium = 0;
+    do {
+      systemData = gasDiffusion.run(points);
+
+      points = systemData.getParticles();
+      if (points.isEmpty()) { // there was no collision indeed => end with a log message
+        LOGGER.info("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        System.out.println("There is no collision at any time with the given parameters.\n" +
+                "Please check that the system is properly set up.");
+        exit(BAD_ARGUMENT);
+      }
+
+      tc = systemData.getCollisionTime(); // Time left to reach dt2
+      systemTime += tc;
+      currentTime += tc;
+      if (currentTime >= dt2) { // don't save system's status if it's not the time
+        while (currentTime >= dt2) { // adjust time counter to be the gap between the exact dt2 time and the real one
+          currentTime -= dt2;
+        }
+        generateOutputDatFile(systemData, i, systemTime); // save to file the current configuration
+        i++;
+        systemData.resetCurrentPressure(); // reset pressure for the new iteration
+        timeAfterEquilibrium ++;
+      }
+    } while (timeAfterEquilibrium < MAX_TIME_AFTER_EQUILIBRIUM);
+
+    // write equilibrium conditions
+    generateOutputDatFile(eqIteration, eqSystemTime, systemTime-eqSystemTime, staticData, systemData);
   }
 
   /**
    * Format:  ID X Y Vx Vy R G B
-   * @param updatedParticles set of particles to be persisted
+   * @param systemData Structure containing all the dynamic information of the system on the
+   *                   current iteration
    * @param iteration the iteration number
+   * @param realTime real time of the simulation (iteration number * dt2)
    */
-  private static void generateOutputDatFile(final Collection<Point> updatedParticles, final long iteration) {
+  private static void generateOutputDatFile(final GasDiffusion.SystemData systemData,
+                                            final int iteration,
+                                            final double realTime) {
     /* delete previous dynamic.dat file, if any */
     final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
-    final Path pathToVaFile = Paths.get(DESTINATION_FOLDER, VA_FILE);
+    final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
 
     /* write the new output.dat file */
-    final String[] data = pointsToString(updatedParticles, iteration);
+    final String[] data = pointsToString(systemData.getW(), systemData.getParticles(), iteration);
 
+    final StringBuilder sb = new StringBuilder();
+    sb      .append(iteration).append(',')
+            .append(realTime).append(',')
+            .append(systemData.getLeftSideFraction()).append(',')
+            .append(systemData.getCurrentPressure()).append(',')
+            .append(data[KINETIC_ENERGY_INDEX]).append('\n');
+
+    writeToOutputFiles(data, pathToDatFile, pathToGraphicsFile, sb);
+  }
+
+  private static void writeToOutputFiles(final String[] data, final Path pathToDatFile, final Path pathToGraphicsFile, final StringBuilder sb) {
     BufferedWriter writer = null;
     BufferedWriter va_writer = null;
     try {
       writer = new BufferedWriter(new FileWriter(pathToDatFile.toFile(), true));
-      writer.write(data[0]);
+      writer.write(data[SYSTEM_PARTICLES_INDEX]);
 
-      va_writer = new BufferedWriter(new FileWriter(pathToVaFile.toFile(), true));
-      va_writer.write(data[1]); // write va data
-      va_writer.write("\n");
+      va_writer = new BufferedWriter(new FileWriter(pathToGraphicsFile.toFile(), true));
+      va_writer.write(sb.toString()); // write data for graphics
 
     } catch (IOException e) {
       LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToDatFile, e);
@@ -215,6 +281,89 @@ public class Main {
 
       }
     }
+  }
+
+  private static void generateOutputDatFile(final int i,
+                                            final double eqTime,
+                                            final double timeSinceEq,
+                                            final StaticData staticData,
+                                            final GasDiffusion.SystemData systemData) {
+    final Path pathToCsvFile = Paths.get(DESTINATION_FOLDER, TIME_TO_EQUILIBRIUM_FILE);
+
+    /* delete previous timeToEquilibrium.dat file, if any */
+    if(!deleteIfExists(pathToCsvFile)) {
+      return;
+    }
+
+    double meanPressure = 0;
+    if (systemData != null && timeSinceEq > 0) {
+      meanPressure = systemData.getTotalPressure()/timeSinceEq;
+    }
+    final double temperature = 1/2.0d * staticData.mass * Math.pow(staticData.speed,2);
+
+    final StringBuilder sb = new StringBuilder();
+
+    final String lineSeparator = System.lineSeparator();
+    sb      .append("N,").append(staticData.N).append(lineSeparator)
+            .append("L,").append(staticData.L).append(lineSeparator)
+            .append("W,").append(staticData.W).append(lineSeparator)
+            .append("mass,").append(staticData.mass).append(lineSeparator)
+            .append("speed,").append(staticData.speed).append(lineSeparator)
+            .append("iteration,").append(i).append(lineSeparator)
+            .append("Real Time (in seconds),").append(eqTime).append(lineSeparator)
+            .append("Pressure,").append(meanPressure).append(lineSeparator)
+            .append("Temperature,").append(temperature).append(lineSeparator)
+            ;
+
+    BufferedWriter writer = null;
+    try {
+      writer = new BufferedWriter(new FileWriter(pathToCsvFile.toFile(), true));
+      writer.write(sb.toString());
+    } catch (IOException e) {
+      LOGGER.warn("An unexpected IO Exception occurred while writing the file {}. Caused by: ", pathToCsvFile, e);
+      System.out.println("[FAIL] - An unexpected error occurred while writing the file '" + pathToCsvFile + "'. \n" +
+              "Check the logs for more info.\n" +
+              "Aborting...");
+      exit(UNEXPECTED_ERROR);
+    } finally {
+      try {
+        // close the writer regardless of what happens...
+        if (writer != null) {
+          writer.close();
+        }
+      } catch (Exception ignored) {
+      }
+    }
+  }
+
+  /**
+   * Generates the file for output data, starting with the headers
+   * Format:  ID X Y Vx Vy R G B
+   * @param particles set of particles to be persisted
+   * @param iteration the iteration number
+   * @param realTime real time of the simulation (iteration number * dt2)
+   */
+  private static void generateOutputDatFile(final double W, final Collection<Point> particles,
+                                            final double fraction,
+                                            final long iteration,
+                                            final double realTime) {
+    /* delete previous dynamic.dat file, if any */
+    final Path pathToDatFile = Paths.get(DESTINATION_FOLDER, OUTPUT_FILE);
+    final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, DATA_FOR_GRAPHICS_FILE);
+
+    /* write the new output.dat file */
+    final String[] data = pointsToString(W, particles, iteration);
+
+    final StringBuilder sb = new StringBuilder();
+    sb      .append("Iteration,").append("Time (s),").append("Fraction,").append("Pressure,").append("Temperature")
+            .append(System.lineSeparator());
+
+    double pressure = 0;
+
+    sb      .append(iteration).append(',').append(realTime).append(',').append(fraction).append(',')
+            .append(pressure).append(',').append(data[KINETIC_ENERGY_INDEX]).append('\n');
+
+    writeToOutputFiles(data, pathToDatFile, pathToGraphicsFile, sb);
   }
 
   private static void generateCase(final String[] args) {
@@ -304,15 +453,23 @@ public class Main {
 
       case "ovito":
         // get particle id
-        if (args.length != 4) {
+        if (args.length != 5) {
           System.out.println("[FAIL] - Bad number of arguments. Try 'help' for more information.");
           exit(BAD_N_ARGUMENTS);
         }
 
         final String staticFile = args[2];
         final String outputFile = args[3];
+        double opening = 0;
+        try {
+          opening = Double.parseDouble(args[4]);
+        } catch (NumberFormatException e) {
+          LOGGER.warn("[FAIL] - <L> must be a number. Caused by: ", e);
+          System.out.println("[FAIL] - <L> argument must be a number. Try 'help' for more information.");
+          exit(BAD_ARGUMENT);
+        }
 
-        generateOvitoFile(staticFile, outputFile);
+        generateOvitoFile(staticFile, outputFile, opening);
         break;
 
       default:
@@ -439,26 +596,33 @@ public class Main {
     return sb.toString();
   }
   // Used for building output.dat
-  private static String[] pointsToString(final Collection<Point> pointsSet, final long iteration) {
+  private static String[] pointsToString(final double W, final Collection<Point> pointsSet, final long iteration) {
     final StringBuilder sb = new StringBuilder();
     sb.append(iteration).append('\n');
     double vx, vy, r, g, b;
-    double vax = 0;
-    double vay = 0;
-    double v = 0;
-    double orientation;
+    double kineticEnergy = 0;
 
     for (final Point point : pointsSet) {
       vx = point.vx();
       vy = point.vy();
-      orientation = Math.atan(vy / vx);
-      vax += vx;
-      vay += vy;
-      v += point.speed();
-      r = Math.cos(orientation);
-      g = Math.sin(orientation);
-      b = Math.cos(orientation) * Math.sin(orientation);
-      sb.append(point.id()).append('\t')
+
+      if (point.isColliding()) {
+        r = 1;
+        g = 0;
+        b = 0;
+      } else if (point.x() < W/2 ) { // left side
+        r = 0;
+        g = 1;
+        b = 0;
+      } else {
+        r = 0;
+        g = 0;
+        b = 1;
+      }
+
+      sb      .append(point.id()).append('\t')
+              // type
+              .append(point.id()).append('\t')
               // position
               .append(point.x()).append('\t').append(point.y()).append('\t')
               // velocity
@@ -466,22 +630,24 @@ public class Main {
               // R G B colors
               .append(r).append('\t')
               .append(g).append('\t')
-              .append(b).append('\n');
+              .append(b).append('\t')
+              // radio
+              .append(point.radio()).append('\n');
+      kineticEnergy += point.kineticEnergy();
     }
 
     // calculate the current va, assuming the average of all point's speeds (works for the current case)
     // 1/(N * v/N) = 1/v for this case, assuming the above is valid
 
-    final double va;
     if (!pointsSet.isEmpty()) {
-      va = (1/v) * (Math.sqrt(Math.pow(vax,2) + Math.pow(vay,2)));
+      kineticEnergy /= pointsSet.size();
     } else {
-      va = -1;
+      kineticEnergy = 0;
     }
 
     final String[] answer = new String[2];
-    answer[0] = sb.toString();
-    answer[1] = String.valueOf(va);
+    answer[SYSTEM_PARTICLES_INDEX] = sb.toString();
+    answer[KINETIC_ENERGY_INDEX] = String.valueOf(kineticEnergy);
 
     return answer;
   }
@@ -500,7 +666,7 @@ public class Main {
    * @param staticFile -
    * @param outputFile -
    */
-  private static void generateOvitoFile(final String staticFile, final String outputFile) {
+  private static void generateOvitoFile(final String staticFile, final String outputFile, final double opening) {
     final Path pathToStaticDatFile = Paths.get(staticFile);
     final Path pathToOutputDatFile = Paths.get(outputFile);
     final Path pathToGraphicsFile = Paths.get(DESTINATION_FOLDER, OVITO_FILE);
@@ -555,45 +721,129 @@ public class Main {
       //W = Double.valueOf(staticDatIterator.next());
       L = staticData.L;
       W = staticData.W;
-
       // Create virtual particles in the borders, in order for Ovito to show the whole board
-      sb.append(N+1).append('\t').append(0).append('\t').append(0).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+2).append('\t').append(0).append('\t').append(L).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+3).append('\t').append(W).append('\t').append(0).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+4).append('\t').append(W).append('\t').append(L).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+5).append('\t').append(W/2).append('\t').append(0).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
-              .append('\n');
-      sb.append(N+6).append('\t').append(W/2).append('\t').append(L).append('\t').append(0)
-              .append('\t').append(0).append('\t')
-              // color: black
-              .append(0).append('\t').append(0).append('\t').append(0)
+
+      sb      // id
+              .append(N+1).append('\t')
+              // type
+              .append(N+1).append('\t')
+              // position
+              .append(0).append('\t').append(0).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
               .append('\n');
 
-      stringN = String.valueOf(N+6);
+      sb      // id
+              .append(N+2).append('\t')
+              // type
+              .append(N+2).append('\t')
+              // position
+              .append(W).append('\t').append(0).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
+              .append('\n');
+
+      sb      // id
+              .append(N+3).append('\t')
+              // type
+              .append(N+3).append('\t')
+              // position
+              .append(W).append('\t').append(L).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
+              .append('\n');
+
+      sb      // id
+              .append(N+4).append('\t')
+              // type
+              .append(N+4).append('\t')
+              // position
+              .append(0).append('\t').append(L).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0)
+              .append('\n');
+
+      final int middleDownBar = N+5, middleUpBar = N+6;
+      sb      // id
+              .append(N+5).append('\t')
+              // type
+              .append(middleDownBar).append('\t')
+              // position
+              .append(W/2).append('\t').append(0).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
+              .append('\n');
+
+      sb      // id
+              .append(N+6).append('\t')
+              // type
+              .append(middleDownBar).append('\t')
+              // position
+              .append(W/2).append('\t').append((L-opening)/2).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
+              .append('\n');
+
+      sb      // id
+              .append(N+7).append('\t')
+              // type
+              .append(middleUpBar).append('\t')
+              // position
+              .append(W/2).append('\t').append((L+opening)/2).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
+              .append('\n');
+
+
+      sb      // id
+              .append(N+8).append('\t')
+              // type
+              .append(middleUpBar).append('\t')
+              // position
+              .append(W/2).append('\t').append(L).append('\t')
+              // velocity
+              .append(0).append('\t').append(0).append('\t')
+              // color: black [ r, g, b ]
+              .append(0).append('\t').append(0).append('\t').append(0).append('\t')
+              // radio
+              .append(0.0001)
+              .append('\n');
+
+
+      stringN = String.valueOf(N+8);
 
       borderParticles = sb.toString();
 
       while(outputDatIterator.hasNext()){
-        // Write ammount of particles (N)
+        // Write amount of particles (N)
         writer.write(stringN);
         writer.newLine();
 

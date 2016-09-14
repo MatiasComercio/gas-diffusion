@@ -2,7 +2,8 @@ package ar.edu.itba.ss.gasdiffusion.models;
 
 public enum Wall {
     HORIZONTAL,
-    VERTICAL;
+    VERTICAL,
+    MIDDLE_VERTICAL;
 
     private double length;
     private double pressure = 0.0;
@@ -21,9 +22,5 @@ public enum Wall {
      */
     public void increasePressure(final double pressure) {
         this.pressure += pressure;
-    }
-
-    public double getPressure() {
-        return pressure;
     }
 }
